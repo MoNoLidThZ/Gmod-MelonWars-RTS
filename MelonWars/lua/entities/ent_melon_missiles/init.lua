@@ -7,7 +7,7 @@ function ENT:Initialize()
 
 	--print("Started Initialize")
 
-	Defaults ( self )
+	MW_Defaults ( self )
 
 	--print("Changing stats")
 
@@ -15,10 +15,12 @@ function ENT:Initialize()
 	self.moveType = MOVETYPE_VPHYSICS
 	self.speed = 80
 	self.spread = 10
-	self.damageDeal = 1
+	self.damageDeal = 2
 	self.maxHP = 40
 	self.range = 350
 	self.minRange = 50
+
+	self.sphereRadius = 15
 	
 	self.careForWalls = true
 	
@@ -36,7 +38,7 @@ function ENT:Initialize()
 	
 	--print("Finished changing stats")
 	
-	Setup ( self )
+	MW_Setup ( self )
 	
 	--print("Finished Initialize")
 end
@@ -46,7 +48,7 @@ function ENT:ModifyColor()
 end
 
 function ENT:SlowThink ( ent )
-	DefaultThink ( ent )
+	MW_UnitDefaultThink ( ent )
 end
 
 function ENT:Shoot ( ent )
@@ -62,7 +64,7 @@ function ENT:Shoot ( ent )
 			local bullet = ents.Create( "ent_melonbullet_missile" )
 			if ( !IsValid( bullet ) ) then return end -- Check whether we successfully made an entity, if not - bail
 			bullet:SetPos( ent:GetPos() + Vector(0,0,10) )
-			bullet:SetNWInt("melonTeam",self.melonTeam)
+			bullet:SetNWInt("mw_melonTeam",self.mw_melonTeam)
 			bullet:Spawn()
 			bullet:SetNWEntity("target", ent.targetEntity)
 			ent.fired = true
@@ -72,5 +74,5 @@ function ENT:Shoot ( ent )
 end
 
 function ENT:DeathEffect ( ent )
-	DefaultDeathEffect ( ent )
+	MW_DefaultDeathEffect ( ent )
 end

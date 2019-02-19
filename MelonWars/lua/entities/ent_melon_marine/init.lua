@@ -7,28 +7,30 @@ function ENT:Initialize()
 
 	--print("Started Initialize")
 	
-	Defaults ( self )
+	MW_Defaults ( self )
 
 	--print("Changing stats")
 
 	self.modelString = "models/props_junk/watermelon01.mdl"
 	self.moveType = MOVETYPE_VPHYSICS
 	self.canMove = true
+
+	self.sphereRadius = 7
 	
 	--print("Finished changing stats")
 	
-	Setup ( self )
+	MW_Setup ( self )
 	--print("Finished Initialize")
 end
 
 function ENT:SlowThink ( ent )
-	DefaultThink ( ent )
+	MW_UnitDefaultThink ( ent )
 end
 
 function ENT:Shoot ( ent )
-	DefaultShoot ( ent )
+	MW_DefaultShoot ( ent )
 end
 
 function ENT:DeathEffect ( ent )
-	DefaultDeathEffect ( ent )
+	MW_DefaultDeathEffect ( ent )
 end

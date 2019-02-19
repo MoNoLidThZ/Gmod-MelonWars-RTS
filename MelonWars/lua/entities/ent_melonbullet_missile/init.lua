@@ -35,7 +35,7 @@ function ENT:Think()
 	local foundEnts = ents.FindInSphere(self:GetPos(), 2 )
 	for k, v in pairs( foundEnts ) do
 		if (v.Base == "ent_melon_prop_base") then --si es una sandía
-			if (v:GetNWInt("melonTeam", 0) ~= self:GetNWInt("melonTeam", 0)) then-- si tienen distinto equipo
+			if (v:GetNWInt("mw_melonTeam", 0) ~= self:GetNWInt("mw_melonTeam", 0)) then-- si tienen distinto equipo
 				self:Explode()
 				return true
 			end
@@ -65,7 +65,8 @@ end
 function ENT:Explode()
 	local effectdata = EffectData()
 	effectdata:SetOrigin( self:GetPos() )
-	util.Effect( "Explosion", effectdata )
+	util.Effect( "HelicopterMegaBomb", effectdata )
+	sound.Play( "ambient/fire/gascan_ignite1.wav", self:GetPos(), 75, 100, 1 )
 	util.BlastDamage( self, self, self:GetPos(), 80, self.damageDeal )
 	self:Remove()
 end

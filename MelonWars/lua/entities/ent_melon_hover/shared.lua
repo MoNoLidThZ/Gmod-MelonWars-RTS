@@ -3,7 +3,7 @@ ENT.Base = "ent_melon_base"
  
 ENT.Category = "Marums pack"
 
-ENT.PrintName= "Melon Hover"
+ENT.PrintName= "Melon mw_hover"
 ENT.Author= "Marum"
 ENT.Contact= "don`t"
 ENT.Purpose= "Annoy"

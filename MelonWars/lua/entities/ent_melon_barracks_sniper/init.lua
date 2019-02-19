@@ -6,22 +6,24 @@ include('shared.lua')
 function ENT:Initialize()
 	--print("Started Initialize")
 
-	Defaults ( self )
+	MW_Defaults ( self )
 
 	self.unit = 7
 	self.modelString = "models/props_wasteland/laundry_cart001.mdl"
 	self.maxHP = 100
-	self.Angles = Angle(90,45,0)
-	self:SetPos(self:GetPos()+Vector(0,0,15))
-	self:SetAngles(self:GetAngles()+self.Angles)
+	//self.Angles = Angle(90,45,0)
+	//self:SetPos(self:GetPos()+Vector(0,0,15))
+	//self:SetAngles(self:GetAngles()+self.Angles)
 
 	--print("Changing stats")
 	
+	self.population = 1
+
 	self:BarrackInitialize()
 	self:SetNWInt("maxunits", 3)
 	--print("Finished changing stats")
 
-	Setup ( self )
+	MW_Setup ( self )
 	
 	--print("Finished Initialize")
 end
@@ -37,9 +39,9 @@ function ENT:Think(ent)
 end
 
 function ENT:Shoot ( ent )
-	--DefaultShoot ( ent )
+	--MW_DefaultShoot ( ent )
 end
 
 function ENT:DeathEffect ( ent )
-	DefaultDeathEffect ( ent )
+	MW_DefaultDeathEffect ( ent )
 end

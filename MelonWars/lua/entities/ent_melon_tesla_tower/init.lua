@@ -7,70 +7,60 @@ function ENT:Initialize()
 
 	--print("Started Initialize")
 	
-	Defaults ( self )
+	MW_Energy_Defaults ( self )
 
 	--print("Changing stats")
 
 	self.modelString = "models/props_c17/FurnitureBoiler001a.mdl"
 	self.speed = 80
 	self.spread = 10
-	self.damageDeal = 4
+	self.damageDeal = 3
 	self.maxHP = 100
 	self.range = 250
 	self.shotSound = "weapons/stunstick/stunstick_impact1.wav"
 	--self.tracer = "AR2Tracer"
-	self:SetPos(self:GetPos()+Vector(0,0,40))
+	//self:SetPos(self:GetPos()+Vector(0,0,40))
 	self.shotOffset = Vector(0,0,30)
 	
 	self.canMove = false
 	self.canBeSelected = false
 	self.moveType = MOVETYPE_NONE
 	
-	self.slowThinkTimer = 0.5
-	--print("Finished changing stats")
-	
-	self:SetNWInt("energy", 0)
-	self:SetNWInt("maxenergy", 100)
+	self.slowThinkTimer = 0.3
+	self.capacity = 0
 	self:SetNWVector("energyPos", Vector(0,0,20))
 	--print("Finished changing stats")
 
-	Setup ( self )
+	MW_Energy_Setup ( self )
 	
-	--InciteConnections(self)
-
-	CalculateConnections(self)
-	self:SetNWBool("canGive", false)
-
 	self:SetCollisionGroup(COLLISION_GROUP_WORLD)
 	self:GetPhysicsObject():EnableMotion(false)
 end
 
 function ENT:SlowThink ( ent )
 
-	PullEnergy(self)
-
-	if (self:GetNWInt("energy", 0) >= 15) then
+	local energyCost = 20
+	if (mw_electric_network[self.network].energy >= energyCost) then
 		local entities = ents.FindInSphere( ent:GetPos(), ent.range )
 		--------------------------------------------------------Disparar
 		local targets = 0
-		local maxtargets = 5
+		local maxtargets = 3
 
 		local foundEntities = {}
-		print("=============")
 		for k, v in pairs(entities) do
 			local tr = util.TraceLine( {
 				start = self:GetPos()+self:GetVar("shotOffset", Vector(0,0,0)),
 				endpos = v:GetPos()+v:GetVar("shotOffset", Vector(0,0,0)),
 				filter = function( foundEnt )
+					if ( foundEnt == self ) then return false end
 					if ( foundEnt.Base == "ent_melon_base" or foundEnt:GetClass() == "prop_physics") then--si hay un prop en el medio
 						return false
 					end
 					return true
 				end
 			})
-			print(PrintTable(tr))
 			if (tostring(tr.Entity) == '[NULL Entity]') then
-				if (v.Base == "ent_melon_base" and !ent:SameTeam(v) and v:GetNWInt("melonTeam", 0) != ent:GetNWInt("melonTeam", 0)) then -- si no es un aliado
+				if (v.Base == "ent_melon_base" and !ent:SameTeam(v)) then -- si no es un aliado
 					table.insert(foundEntities, v)
 				end
 			end
@@ -89,9 +79,8 @@ function ENT:SlowThink ( ent )
 			table.RemoveByValue(foundEntities, closestEntity)
 			table.insert(closestEntities, closestEntity)
 		end
-
 		for k, v in pairs(closestEntities) do
-			if (self:GetNWInt("energy", 0) >= 15) then
+			if (self:DrainPower(energyCost)) then
 			----------------------------------------------------------Encontró target
 				v.damage = v.damage+self.damageDeal
 				local effectdata = EffectData()
@@ -101,14 +90,10 @@ function ENT:SlowThink ( ent )
 				effectdata:SetOrigin( v:GetPos() )
 				util.Effect( "ToolTracer", effectdata )
 				sound.Play( ent.shotSound, ent:GetPos() )
-				self:SetNWInt("energy", self:GetNWInt("energy", 0)-15)
 			end
 		end
 	end
-
-	local energy = math.Round(self:GetNWInt("energy", 0))
-	local max = self:GetNWInt("maxenergy", 0)
-	self:SetNWString("message", "Energy: "..energy.." / "..max)
+	self:Energy_Set_State()
 end
 
 function ENT:Shoot ( ent )
@@ -116,5 +101,5 @@ function ENT:Shoot ( ent )
 end
 
 function ENT:DeathEffect ( ent )
-	DefaultDeathEffect ( ent )
+	MW_DefaultDeathEffect ( ent )
 end

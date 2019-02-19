@@ -6,8 +6,7 @@ include('shared.lua')
 function ENT:Initialize()
 
 	--print("Started Initialize")
-
-	Defaults ( self )
+	MW_Defaults ( self )
 
 	--print("Changing stats")
 
@@ -21,17 +20,19 @@ function ENT:Initialize()
 	self.slowThinkTimer = 1
 	
 	self.population = 2
+
+	self.sphereRadius = 9
 	
 	self.moveType = MOVETYPE_VPHYSICS
 	self.canMove = true
 	self.range = 80
 	self.speed = 105
 	self.damageDeal = 100
-	self.maxHP = 10
+	self.maxHP = 15
 
 	--print("Finished changing stats")
 	
-	Setup ( self )
+	MW_Setup ( self )
 	
 	--print("Finished Initialize")
 	
@@ -60,12 +61,9 @@ function ENT:DeathEffect( ent )
 end
 
 function ENT:SlowThink ( ent )
-	if (ent.canMove) then
-		DefaultThink ( ent )
-		
-		if (ent:GetVelocity():Length() < 15 and self.moving == false) then
-			self.phys:Sleep()
-		end
+	MW_UnitDefaultThink ( ent )
+	--[[if (ent.canMove) then
+		MW_UnitDefaultThink ( ent )
 	else 
 		local pos = ent:GetPos()
 		if (ent.targetEntity == nil) then
@@ -73,14 +71,14 @@ function ENT:SlowThink ( ent )
 			local foundEnts = ents.FindInSphere(pos, ent.range )
 			for k, v in RandomPairs( foundEnts ) do
 				if (v.Base == "ent_melon_base") then
-					if (v:GetNWInt("melonTeam", 0) ~= ent:GetNWInt("melonTeam", 0)) then
+					if (v:GetNWInt("mw_melonTeam", -1) ~= ent:GetNWInt("mw_melonTeam", -1)) then
 						ent.targetEntity = v
 						ent:Shoot(ent)
 					end
 				end
 			end
 		end 
-	end
+	end]]
 end
 
 function ENT:PostEntityPaste( ply, ent, createdEntities )
@@ -89,47 +87,48 @@ end
 
 function ENT:Welded (ent, trace)
 	ent:SetModel("models/props_c17/clock01.mdl")
-	ent:SetPos(ent:GetPos()+Vector(0,0,-5))
-	ent:SetMaterial("models/debug/debugwhite")
-	local color = ent:GetColor()
-	ent:SetColor(Color(color.r*0.5, color.g*0.5, color.b*0.5, 100))
+	ent:SetPos(ent:GetPos()+Vector(0,0,0))
 	ent.canMove = false
 	ent:SetMoveType( MOVETYPE_NONE )
 	ent:SetCollisionGroup( COLLISION_GROUP_IN_VEHICLE )
 	ent.maxHP = 10
 	ent.HP = 10
 	ent.population = 1
-	UpdatePopulation(-1, melonTeam)
+	//MW_UpdatePopulation(-1, mw_melonTeam)
 	ent.range = 100
-	ent.materialString = "Models/effects/vol_light001"
-	for i = 1, 4 do
+	ent.materialString = "Models/effects/comball_sphere"
+	--[[for i = 1, 4 do
 		timer.Simple( 1+i*0.05, function()
 			if (IsValid(ent)) then
 				ent:SetPos(ent:GetPos()+Vector(0,0,-0.3))
 			end
 		end	)
-	end
+	end]]
 	timer.Simple( 1.3, function()
-		ent:SetMaterial("Models/effects/vol_light001")
-		ent:DrawShadow( false )
-		local effectdata = EffectData()
-		effectdata:SetStart( ent:GetPos())
-		util.Effect( "ImpactJeep", effectdata )
+		if (ent:IsValid()) then
+			ent:SetMaterial(ent.materialString)
+			ent:SetColor(Color(255, 255, 255, 255))
+			ent:DrawShadow( false )
+			local effectdata = EffectData()
+			effectdata:SetStart( ent:GetPos())
+			util.Effect( "ImpactJeep", effectdata )
+			ent.targetable = false
+		end
 	end )
-	local weld = constraint.Weld( ent, trace.Entity, 0, trace.PhysicsBone, 0, true , false )
+	local weld = constraint.Weld( self, game.GetWorld(), 0, trace.PhysicsBone, 0, true , false )
 end
 
 function ENT:OnTakeDamage( damage )
 	if (self.canMove) then
-		if ((damage:GetAttacker():GetNWInt("melonTeam", 0) ~= self:GetNWInt("melonTeam", 0) or not damage:GetAttacker():GetVar('careForFriendlyFire')) and not damage:GetAttacker():IsPlayer()) then 
-			if (damage:GetAttacker():GetNWInt("melonTeam", 0) == self:GetNWInt("melonTeam", 0)) then
+		if ((damage:GetAttacker():GetNWInt("mw_melonTeam", 0) ~= self:GetNWInt("mw_melonTeam", 0) or not damage:GetAttacker():GetVar('careForFriendlyFire')) and not damage:GetAttacker():IsPlayer()) then 
+			if (damage:GetAttacker():GetNWInt("mw_melonTeam", 0) == self:GetNWInt("mw_melonTeam", 0)) then
 				self.HP = self.HP - damage:GetDamage()/2
 			else
 				self.HP = self.HP - damage:GetDamage()
 			end
 			self:SetNWFloat( "health", self.HP )
 			if (self.HP <= 0) then
-				Die (self)
+				MW_Die (self)
 			end
 		end
 	else
@@ -152,7 +151,7 @@ function ENT:Shoot ( ent )
 			--util.Effect( "Explosion", effectdata )
 			--ent:Remove()
 				ent:SetPos(ent:GetPos()+Vector(0,0,3))
-				Die ( ent )
+				MW_Die ( ent )
 			end
 		end
 	end )

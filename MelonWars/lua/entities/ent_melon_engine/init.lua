@@ -7,7 +7,7 @@ function ENT:Initialize()
 
 	--print("Started Initialize")
 	
-	Defaults ( self )
+	MW_Defaults ( self )
 
 	--print("Changing stats")
 
@@ -15,30 +15,33 @@ function ENT:Initialize()
 	self.moveType = MOVETYPE_VPHYSICS
 	self.canMove = true
 	self.canShoot = true
-	self.speed = 200
-	self.force = 100
+	self.speed = 150
+	self.thrustforce = 0.2
 
-	self:SetAngles(self:GetAngles()+Angle(90,180,0))
+	//self:SetAngles(self:GetAngles()+Angle(90,180,0))
 
-	local offset = Vector(0,-0.8,0)
-	offset:Rotate(self:GetAngles())
-	self:SetPos(self:GetPos()+offset)
+	//local offset = Vector(0,-0.8,0)
+	//offset:Rotate(self:GetAngles())
+	//self:SetPos(self:GetPos()+offset)
 
-	self.maxHP = 50
+	self.maxHP = 25
 	
 	--print("Finished changing stats")
 	
-	self.damping = 4
-	
-	Setup ( self )
-	
-	self:GetPhysicsObject():SetDamping( 1, 300)
-	self:GetPhysicsObject():SetMass(150)
+	self.damping = 0.01
+	self.angularDamping = 1000
+
+	MW_Setup ( self )
+
+	self:GetPhysicsObject():SetMass(50)
+
+	self.moving = true;
+
 	--print("Finished Initialize")
 end
 
 function ENT:SlowThink ( ent )
-	--DefaultThink ( ent )
+	--MW_UnitDefaultThink ( ent )
 end
 
 function ENT:Welded( ent, parent )
@@ -50,9 +53,9 @@ function ENT:Welded( ent, parent )
 	ent.parent = parent
 
 	--Resta su poblacion para luego sumar la nueva
-	UpdatePopulation(-ent.population, melonTeam)
+	MW_UpdatePopulation(-ent.population, mw_melonTeam)
 	ent.population = math.ceil(ent.population/2)
-	UpdatePopulation(ent.population, melonTeam)
+	MW_UpdatePopulation(ent.population, mw_melonTeam)
 end
 
 function ENT:Update( ent )
@@ -65,41 +68,16 @@ function ENT:Update( ent )
 			ent:SetNWFloat( "health", ent.HP )
 			ent.damage = 0
 			if (ent.HP <= 0) then
-				Die( ent )
+				MW_Die( ent )
 			end
 		end
-		
-		--if (ent.targetEntity == ent) then
-		--	ent.targetEntity = nil
-		--end
-		--if (ent.followEntity == ent) then
-		--	ent.followEntity = nil
-		--end
+
 		ent:SetNWVector( "targetPos", ent.targetPos )
-		--ent:SetNWEntity( "targetEntity", ent.targetEntity )
+
 		ent:SetNWEntity( "followEntity", ent.followEntity )
 		
 		if (ent.canMove) then
-			--[[
-			if (ent.followEntity ~= ent) then
-				if (IsValid(ent.followEntity)) then
-					if (ent.followEntity:GetPos():Distance(ent:GetPos()) > ent.range) then
-						ent.targetPos = ent.followEntity:GetPos()+(ent:GetPos()-ent.followEntity:GetPos()):GetNormalized()*ent.range*0.5
-						ent.moving = true
-					end
-				end
-			else
-				if (ent.chasing) then
-					if (IsValid(ent.targetEntity)) then
-						if (ent.targetEntity:GetPos():Distance(ent:GetPos()) > ent.range) then
-							ent.targetPos = ent.targetEntity:GetPos()+(ent:GetPos()-ent.targetEntity:GetPos()):GetNormalized()*ent.range*0.9
-							ent.moving = true
-						end
-					end
-				end
-			end
-			]]
-			local phys = ent:GetPhysicsObject()
+			local phys = self.phys
 			
 			local const = constraint.FindConstraints( self, "Weld" )
 			if (table.Count(const) == 0) then
@@ -108,19 +86,26 @@ function ENT:Update( ent )
 			
 			if (IsValid(phys)) then
 				---------------------------------------------------------------------------Movimiento
-				if (ent.moving and ent:GetVelocity():Length()<ent.speed) then
-					local moveVector = (ent.targetPos-ent:GetPos()):GetNormalized()*self.force
+				if (ent.moving) then
+					local moveVector = (ent.targetPos-ent:GetPos()):GetNormalized()*self.speed-self:GetVelocity()
 					force = Vector(moveVector.x, moveVector.y, 0)
-					phys:ApplyForceCenter (force*phys:GetMass())
+					ent.moveForce = force*self.thrustforce
+				else
+					local moveVector = -ent:GetVelocity()*0.2
+					force = Vector(moveVector.x, moveVector.y, 0)
+					ent.moveForce = force
 				end
 			end
-			
-			--if (ent.targetPos:Distance(ent:GetPos()) < 30) then
-			--	ent.moving = false
-			--end
-			
+
 			if (Vector(ent:GetPos().x, ent:GetPos().y, 0):Distance(Vector(ent.targetPos.x, ent.targetPos.y, 0)) < 100) then
 				ent:FinishMovement()
+				for k, v in pairs(constraint.GetAllConstrainedEntities( self )) do
+					if (v.Base == "ent_melon_base") then
+						if (v != ent) then
+							v:FinishMovement()
+						end
+					end
+				end
 			end
 
 			ent:SetNWBool("moving", ent.moving)
@@ -132,34 +117,25 @@ function ENT:Update( ent )
 end
 
 function ENT:PhysicsUpdate()
-	local mul = 150
-	local phys = self:GetPhysicsObject()
-	local forcePoint = self:GetPos()+self:GetAngles():Forward()*mul
-	local forceTarget = self:GetPos()+Vector(0,0,-mul)
-	phys:ApplyForceOffset( (forceTarget-forcePoint)*mul, forcePoint )
-	forcePoint = self:GetPos()+self:GetAngles():Forward()*-mul
-	forceTarget = self:GetPos()+Vector(0,0,mul)
-	phys:ApplyForceOffset( (forceTarget-forcePoint)*mul, forcePoint )
-	--phys:ApplyForceCenter( Vector(0,0,(forceTarget-forcePoint):Length()*20))
 
-	local moveVector = (self.targetPos-self:GetPos())
-	if (self.moving and moveVector:LengthSqr() > 50) then
-		moveVector = moveVector:GetNormalized()
-		local mul = 180
-		local phys = self:GetPhysicsObject()
-		local forcePoint = self:GetPos()+self:GetAngles():Up()*mul
-		local forceTarget = self:GetPos()+Vector(moveVector.x,moveVector.y,0)*mul
-		phys:ApplyForceOffset( (forceTarget-forcePoint)*-mul, forcePoint )
-		forcePoint = self:GetPos()+self:GetAngles():Up()*-mul
-		forceTarget = self:GetPos()+Vector(moveVector.x,moveVector.y,0)*-mul
-		phys:ApplyForceOffset( (forceTarget-forcePoint)*-mul, forcePoint )
+	self:Align(self:GetAngles():Forward(), Vector(0,0,-1), 10000)
+
+	local moveVector = (self.targetPos-self:GetPos()):GetNormalized()
+	if (self.moving) then
+		self:Align(self:GetAngles():Up(), -moveVector, 100000)
 	end
+
+	//local damp = -self:GetAngles():Up():Dot(moveVector)
+	local damp = 0.8
+	self:StopAngularVelocity(damp)
+
+	self:DefaultPhysicsUpdate()
 end
 
 function ENT:Shoot ( ent )
-	--DefaultShoot ( ent )
+	--MW_DefaultShoot ( ent )
 end
 
 function ENT:DeathEffect ( ent )
-	DefaultDeathEffect ( ent )
+	MW_DefaultDeathEffect ( ent )
 end

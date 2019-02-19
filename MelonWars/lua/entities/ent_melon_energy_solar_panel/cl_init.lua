@@ -5,7 +5,7 @@ function ENT:Draw()
     -- self.BaseClass.Draw(self) -- Overrides Draw
      self:DrawModel() -- Draws Model Client Side
 
-    local state = self:GetNWFloat("energy", 0)/self:GetNWFloat("maxenergy", 1)
+    local state = self:GetNWInt("state", 0.5)/1000
     local s = 60
     cam.Start3D2D( self:GetPos()+self:GetUp()*63+Vector(0,0,17), self:GetAngles()+Angle(90,0,180), 1 )
         surface.SetDrawColor( Color( 10, 10, 10, 255 ) )

@@ -7,7 +7,7 @@ function ENT:Initialize()
 
 	--print("Started Initialize")
 
-	Defaults ( self )
+	MW_Defaults ( self )
 
 	--print("Changing stats")
 
@@ -15,15 +15,18 @@ function ENT:Initialize()
 	self.moveType = MOVETYPE_VPHYSICS
 	self.canMove = true
 	
-	self.damageDeal = 10
+	self.damageDeal = 4
+	self.maxHP = 30
+
+	self.sphereRadius = 7
 	
-	self.population = 2
+	self.population = 1
 	
 	self.shotSound = "items/medshot4.wav"
 	
 	--print("Finished changing stats")
 	
-	Setup ( self )
+	MW_Setup ( self )
 end
 
 function ENT:ModifyColor()
@@ -31,13 +34,7 @@ function ENT:ModifyColor()
 end
 
 function ENT:SlowThink ( ent )
-	if (ent.HP < ent.maxHP) then
-		ent.HP = ent.HP+1
-		if (ent.HP > ent.maxHP) then
-			ent.HP = ent.maxHP
-		end
-		ent:SetNWFloat( "health", ent.HP )
-	end
+	local healed = false
 	if (ent.canShoot) then
 		local pos = ent:GetPos()
 		if (ent.targetEntity == nil) then
@@ -45,22 +42,24 @@ function ENT:SlowThink ( ent )
 			local foundEnts = ents.FindInSphere(pos, ent.range )
 			for k, v in RandomPairs( foundEnts ) do
 				if (v.Base == "ent_melon_base") then
-					if (v:GetNWInt("melonTeam", 0) == ent:GetNWInt("melonTeam", 0) or ent:SameTeam(v)) then
-						if(v ~= ent) then
-							if (v.spawned) then
-								local tr = util.TraceLine( {
-								start = pos,
-								endpos = v:GetPos(),
-								filter = function( foundEnt )
-									if ( foundEnt:GetClass() == "prop_physics" ) then
-										return true
+					if (v:GetNWInt("mw_melonTeam", 0) == ent:GetNWInt("mw_melonTeam", 0) or ent:SameTeam(v)) then
+						if(v:GetClass() ~= ent:GetClass()) then
+							if (not string.StartWith(v:GetClass(), "ent_melon_main_building")) then
+								if (v.spawned) then
+									local tr = util.TraceLine( {
+									start = pos,
+									endpos = v:GetPos(),
+									filter = function( foundEnt )
+										if ( foundEnt:GetClass() == "prop_physics" ) then
+											return true
+										end
 									end
-								end
-								})
-								if (tostring(tr.Entity) == '[NULL Entity]') then
-								----------------------------------------------------------Encontró target
-									if (v:GetVar("HP") < v:GetVar("maxHP")) then
-										ent.targetEntity = v
+									})
+									if (tostring(tr.Entity) == '[NULL Entity]') then
+									----------------------------------------------------------Encontró target
+										if (v:GetVar("HP") < v:GetVar("maxHP")) then
+											ent.targetEntity = v
+										end
 									end
 								end
 							end
@@ -94,14 +93,24 @@ function ENT:SlowThink ( ent )
 			local tr = util.TraceLine( {
 			start = pos,
 			endpos = ent.targetEntity:GetPos(),
-			filter = function( foundEntity ) if ( foundEntity:GetClass() == "prop_physics" and foundEntity ~= ent.targetEntity  and !string.StartWith( ent.targetEntity:GetClass(), "ent_melonbullet_" )) then return true end end
+			filter = function( foundEntity ) if ( foundEntity:GetClass() == "prop_physics" and foundEntity ~= ent.targetEntity and !string.StartWith( ent.targetEntity:GetClass(), "ent_melon_main_building") and !string.StartWith( ent.targetEntity:GetClass(), "ent_melonbullet_" )) then return true end end
 			})
 			if (tostring(tr.Entity) ~= '[NULL Entity]') then
 				ent.targetEntity = nil
 				ent.nextSlowThink = CurTime()+0.1
 				return false
 			end
-			ent:Shoot( ent )
+
+			healed = ent:Shoot( ent )
+		end
+	end
+	if (not healed) then
+		if (ent.HP < ent.maxHP) then // SELF HEAL
+			ent.HP = ent.HP+1
+			if (ent.HP > ent.maxHP) then
+				ent.HP = ent.maxHP
+			end
+			ent:SetNWFloat( "health", ent.HP )
 		end
 	end
 end
@@ -111,36 +120,44 @@ function ENT:Shoot ( ent )
 	if (ent.targetEntity == ent) then ent.targetEntity = nil end
 	if (IsValid(ent.targetEntity)) then
 		--print(self:SameTeam(ent))
-		if (ent.targetEntity:GetNWInt("melonTeam", 0) == ent:GetNWInt("melonTeam", 0) or ent:SameTeam(ent.targetEntity)) then
-			local pos = ent:GetPos()+ent.shotOffset
-			local targetPos = ent.targetEntity:GetPos()
-			if (ent.targetEntity:GetVar("shotOffset") ~= nil) then
-				targetPos = targetPos+ent.targetEntity:GetVar("shotOffset")
-			end
-			//ent:FireBullets(bullet)
-			local effectdata = EffectData()
-			effectdata:SetOrigin( targetPos + Vector(0,0,10) )
-			util.Effect( "inflator_magic", effectdata )
-			util.Effect( "inflator_magic", effectdata )
-			util.Effect( "inflator_magic", effectdata )
-			util.Effect( "inflator_magic", effectdata )
-			util.Effect( "inflator_magic", effectdata )
-			effectdata:SetOrigin( pos + Vector(0,0,10) )
-			util.Effect( "inflator_magic", effectdata )
-			sound.Play( ent.shotSound, pos )
-			local heal = ent.targetEntity:GetVar("HP")+math.min(ent.damageDeal, ent.targetEntity:GetVar("maxHP")-ent.targetEntity:GetVar("HP"))
-			ent.targetEntity:SetVar("HP", heal)
-			ent.targetEntity:SetNWFloat("health", heal)
-			ent.fired = true
-			if (ent.targetEntity:GetVar("HP") == ent.targetEntity:GetVar("maxHP")) then
-				ent.targetEntity = nil
+		if (ent.targetEntity:GetNWInt("mw_melonTeam", 0) == ent:GetNWInt("mw_melonTeam", 0) or ent:SameTeam(ent.targetEntity)) then
+			local heal = math.min(ent.damageDeal, ent.targetEntity:GetVar("maxHP")-ent.targetEntity:GetVar("HP"))
+			
+			if (heal < ent.HP) then
+				local newHealth = ent.targetEntity:GetVar("HP")+heal
+				local pos = ent:GetPos()+ent.shotOffset
+				local targetPos = ent.targetEntity:GetPos()
+				if (ent.targetEntity:GetVar("shotOffset") ~= nil) then
+					targetPos = targetPos+ent.targetEntity:GetVar("shotOffset")
+				end
+				//ent:FireBullets(bullet)
+				local effectdata = EffectData()
+				effectdata:SetOrigin( targetPos + Vector(0,0,10) )
+				util.Effect( "inflator_magic", effectdata )
+				util.Effect( "inflator_magic", effectdata )
+				util.Effect( "inflator_magic", effectdata )
+				util.Effect( "inflator_magic", effectdata )
+				util.Effect( "inflator_magic", effectdata )
+				effectdata:SetOrigin( pos + Vector(0,0,10) )
+				util.Effect( "inflator_magic", effectdata )
+				sound.Play( ent.shotSound, pos )
+
+				ent.targetEntity:SetVar("HP", newHealth)
+				ent.targetEntity:SetNWFloat("health", newHealth)
+				ent.fired = true
+				if (ent.targetEntity:GetVar("HP") == ent.targetEntity:GetVar("maxHP")) then
+					ent.targetEntity = nil
+				end
+				ent.damage = heal
+				return true
 			end
 		else
 			ent.targetentity = nil
 		end
 	end
+	return false
 end
 
 function ENT:DeathEffect ( ent )
-	DefaultDeathEffect ( ent )
+	MW_DefaultDeathEffect ( ent )
 end

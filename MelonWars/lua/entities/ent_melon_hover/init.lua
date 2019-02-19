@@ -7,7 +7,7 @@ function ENT:Initialize()
 
 	--print("Started Initialize")
 	
-	Defaults ( self )
+	MW_Defaults ( self )
 
 	--print("Changing stats")
 	self.birth = CurTime()
@@ -15,20 +15,22 @@ function ENT:Initialize()
 	self.modelString = "models/props_c17/pulleywheels_small01.mdl"
 	self.moveType = MOVETYPE_VPHYSICS
 	self.canMove = true
-	self:SetAngles(self:GetAngles()+Angle(90,0,0))
+	//self:SetAngles(self:GetAngles()+Angle(90,0,0))
 	
 	self.population = 1
+
+	//self.sphereRadius = 5
 	
 	self:SetNWBool("done",false)
 	
 	self.delayedForce = 0
 	
-	self.damping = 4
+	self.damping = 1
 	
 	self.maxHP = 50
 	--print("Finished changing stats")
 	
-	Setup ( self )
+	MW_Setup ( self )
 	
 	--print("Finished Initialize")
 end
@@ -42,7 +44,7 @@ function ENT:SlowThink ( ent )
 end
 
 function ENT:Shoot ( ent )
-	--DefaultShoot ( ent )
+	--MW_DefaultShoot ( ent )
 end
 
 function ENT:Update (ent)
@@ -55,7 +57,7 @@ function ENT:Think ()
 		self:SetNWFloat( "health", self.HP )
 		self.damage = 0
 		if (self.HP <= 0) then
-			Die( self )
+			MW_Die( self )
 		end
 	end
 		
@@ -76,7 +78,7 @@ function ENT:PropellerReady ()
 end
 
 function ENT:DeathEffect ( ent )
-	DefaultDeathEffect ( ent )
+	MW_DefaultDeathEffect ( ent )
 end
 
 function ENT:PhysicsUpdate()
@@ -90,10 +92,9 @@ function ENT:PhysicsUpdate()
 		local tr = util.TraceLine( {
 		start = self:GetPos(),
 		endpos = self:GetPos()+Vector(0,0,-hoverdistance*2),
-		filter = function( ent ) if ( ent:GetClass() == "prop_physics" ) then return false end end,
+		filter = function( ent ) if ( not ent:GetPhysicsObject():IsMoveable() ) then return true end end,
 		mask = MASK_WATER+MASK_SOLID
-		}
-		)
+		} )
 		
 		local distance = self:GetPos():Distance(tr.HitPos)
 		
@@ -110,6 +111,12 @@ function ENT:PhysicsUpdate()
 			self.delayedForce = self.delayedForce*0.5
 		end
 		phys:ApplyForceCenter(Vector(0,0,self.delayedForce))
+		if (IsValid(tr.Entity)) then
+			local p = tr.Entity:GetPhysicsObject()
+			if (p ~= nil) then
+				p:ApplyForceOffset(Vector(0,0,-self.delayedForce), tr.HitPos)
+			end
+		end
 		--[[local mul = 10
 		local forcePoint = self:GetPos()+self:GetAngles():Up()*mul
 		local forceTarget = self:GetPos()+Vector(0,0,mul)
@@ -118,16 +125,8 @@ function ENT:PhysicsUpdate()
 		forceTarget = self:GetPos()+Vector(0,0,-mul)
 		phys:ApplyForceOffset( (forceTarget-forcePoint)*mul, forcePoint )]]
 		--end
+
+		self:Align(self:GetAngles():Forward(), Vector(0,0,-1), 10000)
+		self:StopAngularVelocity(0.3)
 	end
-	
-	local mul = 30
-	local phys = self:GetPhysicsObject()
-	local forcePoint = self:GetPos()+self:GetAngles():Forward()*mul
-	local forceTarget = self:GetPos()+Vector(0,0,mul)
-	phys:ApplyForceOffset( (forceTarget-forcePoint)*-mul, forcePoint )
-	forcePoint = self:GetPos()+self:GetAngles():Forward()*-mul
-	forceTarget = self:GetPos()+Vector(0,0,-mul)
-	phys:ApplyForceOffset( (forceTarget-forcePoint)*-mul, forcePoint )
-	--phys:ApplyForceCenter( Vector(0,0,(forceTarget-forcePoint):Length()*20))
-	--if (self:GetVelocity():Length() < 0.1) then phys:Sleep() end
 end

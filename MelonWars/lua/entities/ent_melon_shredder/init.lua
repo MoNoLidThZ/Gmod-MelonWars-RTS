@@ -6,12 +6,12 @@ include('shared.lua')
 function ENT:Initialize()
 	--print("Started Initialize")
 
-	Defaults ( self )
+	MW_Defaults ( self )
 
 	--print("Changing stats")
 	
 	self.modelString = "models/props_c17/TrapPropeller_Blade.mdl"
-	self.Angles = Angle(0,0,0)
+	//self.Angles = Angle(0,0,0)
 	self.canMove = false
 	self.canBeSelected = false
 	self.canShoot = false
@@ -26,11 +26,12 @@ function ENT:Initialize()
 
 	self.careForFriendlyFire = false
 	
-	self:SetPos(self:GetPos()+Vector(0,0,0))
+	self.population = 0	
+	//self:SetPos(self:GetPos()+Vector(0,0,0))
 	
 	self.melons = {}
 	--print("Finished changing stats")
-	Setup ( self )
+	MW_Setup ( self )
 	
 	--print("Finished Initialize")
 	self:SetCollisionGroup(COLLISION_GROUP_WORLD)
@@ -50,14 +51,14 @@ function ENT:SlowThink(ent)
 			if (v.Base == "ent_melon_base") then
 				if (v:GetNWFloat("health", 100) <= self.damageDeal) then
 					local gain = v:GetVar("value")*0.9
-					--if (v:GetVar("melonTeam") ~= self:GetNWInt("melonTeam", 0)) then
+					--if (v:GetVar("mw_melonTeam") ~= self:GetNWInt("mw_melonTeam", 0)) then
 					--	gain = math.max(15, gain)
 					--end
-					teamCredits[self:GetNWInt("melonTeam", 0)] = teamCredits[self:GetNWInt("melonTeam", 0)]+gain
+					mw_teamCredits[self:GetNWInt("mw_melonTeam", 0)] = mw_teamCredits[self:GetNWInt("mw_melonTeam", 0)]+gain
 					for k, v in pairs( player.GetAll() ) do
-						if (v:GetInfo("mw_team") == tostring(self:GetNWInt("melonTeam", 0))) then
-							net.Start("TeamCredits")
-								net.WriteInt(teamCredits[self:GetNWInt("melonTeam", 0)] ,16)
+						if (v:GetInfo("mw_team") == tostring(self:GetNWInt("mw_melonTeam", 0))) then
+							net.Start("MW_TeamCredits")
+								net.WriteInt(mw_teamCredits[self:GetNWInt("mw_melonTeam", 0)] ,32)
 							net.Send(v)
 						end
 					end
@@ -78,14 +79,14 @@ function ENT:StartTouch( entity )
 	if (entity.Base == "ent_melon_base") then
 		if (entity:GetVar("HP") <= self.damageDeal) then
 			local gain = entity:GetVar("value")
-			if (entity:GetVar("melonTeam") ~= self.melonTeam) then
+			if (entity:GetVar("mw_melonTeam") ~= self.mw_melonTeam) then
 				gain = math.max(15, gain)
 			end
-			teamCredits[self.melonTeam] = teamCredits[self.melonTeam]+gain
+			mw_teamCredits[self.mw_melonTeam] = mw_teamCredits[self.mw_melonTeam]+gain
 			for k, v in pairs( player.GetAll() ) do
-				if (v:GetInfo("mw_team") == tostring(self.melonTeam)) then
-					net.Start("TeamCredits")
-						net.WriteInt(teamCredits[self.melonTeam] ,16)
+				if (v:GetInfo("mw_team") == tostring(self.mw_melonTeam)) then
+					net.Start("MW_TeamCredits")
+						net.WriteInt(mw_teamCredits[self.mw_melonTeam] ,32)
 					net.Send(v)
 				end
 			end
@@ -97,16 +98,16 @@ end
 ]]
 
 function ENT:Shoot ( ent )
-	--DefaultShoot ( ent )
+	--MW_DefaultShoot ( ent )
 end
 
 function ENT:DeathEffect ( ent )
-	DefaultDeathEffect ( ent )
+	MW_DefaultDeathEffect ( ent )
 end
 
 function ENT:Use( activator, caller, useType, value )
 	if (useType == USE_TOGGLE) then
-		if (caller.melonTeam == self.melonTeam) then
+		if (caller.mw_melonTeam == self.mw_melonTeam) then
 			print("boop")
 		end
 	end

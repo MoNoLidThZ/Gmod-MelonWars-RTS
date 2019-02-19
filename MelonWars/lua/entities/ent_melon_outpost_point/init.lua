@@ -3,7 +3,7 @@ AddCSLuaFile( "shared.lua" )  -- and shared scripts are sent.
  
 include('shared.lua')
 
-team_colors  = {Color(255,50,50,255),Color(50,50,255,255),Color(255,200,50,255),Color(30,200,30,255),Color(255,50,255,255),Color(100,255,255,255),Color(255,120,0,255),Color(10,30,70,255)}
+mw_team_colors  = {Color(255,50,50,255),Color(50,50,255,255),Color(255,200,50,255),Color(30,200,30,255),Color(255,50,255,255),Color(100,255,255,255),Color(255,120,0,255),Color(10,30,70,255)}
 
 function ENT:Initialize()
 	
@@ -11,7 +11,7 @@ function ENT:Initialize()
 
 	self.slowThinkTimer = 2
 
-	self.melonTeam = 0
+	self.mw_melonTeam = 0
 	
 	self.nextSlowThink = 0
 	self:SetModel( "models/props_docks/dock03_pole01a_256.mdl" )
@@ -47,6 +47,10 @@ function ENT:Initialize()
 		self:DeleteOnRemove( self.zone )
 end
 
+function ENT:OnDuplicated( entTable )
+	self:SetPos(self:GetPos()-Vector(0,0,89))
+end
+
 function ENT:Think()
 
 	if (CurTime() > self.nextSlowThink) then
@@ -57,27 +61,13 @@ end
 
 function ENT:SlowThink()
 
-	if (SERVER) then
-		--if (self.capTeam ~= 0) then
-		--	teamCredits[self.capTeam] = teamCredits[self.capTeam]+5
-		--	print("Crediting team "..tostring(self.capTeam))
-		--	for k, v in pairs( player.GetAll() ) do
-		--		if (v:GetInfo("mw_team") == tostring(self.capTeam)) then
-		--			net.Start("TeamCredits")
-		--				net.WriteInt(teamCredits[self.capTeam] ,16)
-		--			net.Send(v)
-		--		end
-		--	end
-		--end
-	end
-
 	local capturing = {0,0,0,0,0,0,0,0}
 	
 	local foundEnts = ents.FindInSphere(self:GetPos(), 200 )
 	for k, v in RandomPairs( foundEnts ) do
 		if (v.Base == "ent_melon_base") then
-			if (v:GetNWInt("melonTeam", 0) >= 1) then
-				capturing[v:GetNWInt("melonTeam", 0)] = capturing[v:GetNWInt("melonTeam", 0)]+4
+			if (v:GetNWInt("mw_melonTeam", 0) >= 1) then
+				capturing[v:GetNWInt("mw_melonTeam", 0)] = capturing[v:GetNWInt("mw_melonTeam", 0)]+4
 				
 				local effectdata = EffectData()
 				effectdata:SetScale(0)
@@ -87,7 +77,13 @@ function ENT:SlowThink()
 			end
 		end
 	end
+
+	local totalCapture = 0
 	
+	for i=1,8 do 
+		totalCapture = totalCapture + self.captured[i]
+	end
+
 	for i=1,8 do 
 		local capture = math.Round(math.sqrt(capturing[i]))*4
 		--Si hay gente capturando
@@ -98,7 +94,7 @@ function ENT:SlowThink()
 					--Si alguien más estaba capturando
 					if (self.captured[ii] > 0) then
 						--Bajar su captura
-						self.captured[ii] = self.captured[ii]-capture
+						self.captured[ii] = math.max(0,self.captured[ii]-capture)
 						othersHaveCapture = true
 					end
 				end
@@ -107,18 +103,14 @@ function ENT:SlowThink()
 			if (!othersHaveCapture) then
 				self.captured[i] = math.min(100, self.captured[i]+capture)
 			end
-		else 
+		--[[else 
 		--Si no, bajarle
-			self.captured[i] = math.max(0, self.captured[i]-10)
+			--if (totalCapture == 0) then
+				self.captured[i] = math.max(0, self.captured[i]-10)
+			--end]]
 		end
 	end 
-	
-	local totalCapture = 0
-	
-	for i=1,8 do 
-		totalCapture = totalCapture + self.captured[i]
-	end
-	
+
 	if (totalCapture == 100) then
 		for i=1,8 do 
 			if (self.captured[i] == totalCapture) then
@@ -127,13 +119,13 @@ function ENT:SlowThink()
 		end
 	end
 	
-	if (totalCapture == 0) then
+	if (totalCapture <= 0) then
 		self:GetCaptured(0, self)
 	end
 	
-	if (self.captured[self.capTeam] == 0) then
-		self:GetCaptured(0, self)
-	end
+	--if (self.captured[self.capTeam] == 0) then
+	--	self:GetCaptured(0, self)
+	--end
 	
 	for i=1, 8 do
 		self:SetNWInt("captured"..tostring(i), self.captured[i])
@@ -143,31 +135,7 @@ end
 
 function ENT:GetCaptured(capturingTeam, ent)
 	local newColor = Color(255,255,255,255)
-	if (capturingTeam > 0) then newColor = team_colors[capturingTeam] end
-	--[[if (capturingTeam == 1) then
-		newColor = Color(255,50,50,255)
-	end
-	if (capturingTeam == 2) then
-		newColor = Color(50,50,255,255)
-	end
-	if (capturingTeam == 3) then
-		newColor = Color(255,255,50,255)
-	end
-	if (capturingTeam == 4) then
-		newColor = Color(30,200,30,255)
-	end
-	if (capturingTeam == 5) then
-		newColor = Color(255,50,255,255)
-	end
-	if (capturingTeam == 6) then
-		newColor = Color(50,255,255,255)
-	end
-	if (capturingTeam == 7) then
-		newColor = Color(255,120,0,255)
-	end
-	if (capturingTeam == 8) then
-		newColor = Color(10,30,70,255)
-	end]]
+	if (capturingTeam > 0) then newColor = mw_team_colors[capturingTeam] end
 
 	ent.capTeam = capturingTeam
 	ent:SetNWInt("capTeam", capturingTeam)

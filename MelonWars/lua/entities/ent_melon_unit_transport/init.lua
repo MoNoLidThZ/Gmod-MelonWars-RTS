@@ -9,13 +9,13 @@ function ENT:Initialize()
 	--print("Started Initialize")
 	
 
-	Defaults ( self )
+	MW_Defaults ( self )
 
 	self.unit = 2
 	self.modelString = "models/props_junk/wood_crate002a.mdl"
 	self.maxHP = 50
-	self.Angles = Angle(0,0,0)
-	self:SetPos(self:GetPos()+Vector(0,0,10))
+	//self.Angles = Angle(0,0,0)
+	//self:SetPos(self:GetPos()+Vector(0,0,10))
 
 	--print("Changing stats")
 	
@@ -28,7 +28,7 @@ function ENT:Initialize()
 	self.canEatUnits = true
 	--print("Finished changing stats")
 
-	Setup ( self )
+	MW_Setup ( self )
 	--print("Finished Initialize")
 	self:SetCollisionGroup(COLLISION_GROUP_NONE)
 
@@ -48,32 +48,36 @@ function ENT:SlowThink(ent)
 end
 
 function ENT:Shoot ( ent )
-	--DefaultShoot ( ent )
+	--MW_DefaultShoot ( ent )
 end
 
 function ENT:DeathEffect ( ent )
-	DefaultDeathEffect ( ent )
+	MW_DefaultDeathEffect ( ent )
 end
 
 function ENT:PhysicsCollide( data, physobj )
 	local hitEntity = data.HitEntity
 	if (hitEntity:IsWorld()) then return end
 	
-	if (self.canEatUnits and hitEntity:GetNWInt("melonTeam", 0) == self:GetNWInt("melonTeam", -1)) then
-		if (hitEntity.Base == "ent_melon_base" and hitEntity.canMove == true and hitEntity:GetClass() != "ent_melon_engine") then
+	if (self.canEatUnits and hitEntity:GetNWInt("mw_melonTeam", 0) == self:GetNWInt("mw_melonTeam", -1)) then
+		if (hitEntity.Base == "ent_melon_base" and hitEntity.canMove == true and hitEntity:GetClass() != "ent_melon_engine" and hitEntity:GetClass() != "ent_melon_engine_large"and hitEntity:GetClass() != "ent_melon_wheel") then
 			if (hitEntity.population <= self:GetNWInt("maxunits", 0) - self:GetNWInt("count", 0)) then
 				local index = self:GetNWInt("count", 0)
 				self:SetNWInt("count", index+hitEntity.population)
 				self:SetNWString("class"..index, hitEntity:GetClass())
 				self:SetNWFloat("hp"..index, hitEntity:GetNWFloat("health", 0))
 				self:SetNWInt("value"..index, hitEntity.value)
-				UpdatePopulation(hitEntity.population, self:GetNWInt("melonTeam", 0))
+				MW_UpdatePopulation(hitEntity.population, self:GetNWInt("mw_melonTeam", 0))
 				self.population = self.population+hitEntity.population
 				hitEntity.fired = true
 				hitEntity:Remove()
 			end
 		end
 	end
+end
+
+function ENT:Actuate()
+	self:FreeUnits()
 end
 
 function ENT:FreeUnits()
@@ -87,7 +91,7 @@ function ENT:FreeUnits()
 				local pos = self:GetPos()+Vector(math.random(-10,10),math.random(-10,10),count*10)
 				local value = self:GetNWInt("value"..i, 0)
 				local hp = self:GetNWInt("hp"..i, 0)
-				local _team = self:GetNWInt("melonTeam", -1)
+				local _team = self:GetNWInt("mw_melonTeam", -1)
 				--print("Class: "..class.." - Trace Hitpos: "..tostring(trace.HitPos).." - Cost: "..cost.." - Team: ".._team)
 				
 				local newMarine = ents.Create( class )
@@ -97,7 +101,7 @@ function ENT:FreeUnits()
 				
 				--sound.Play( "garrysmod/content_downloaded.wav", trace.HitPos, 60, 90, 1 )
 				--sound.Play( "garrysmod/content_downloaded.wav", pl:GetPos(), 60, 90, 1 )
-				melonTeam = _team
+				mw_melonTeam = _team
 
 				newMarine:Spawn()
 				
@@ -106,7 +110,7 @@ function ENT:FreeUnits()
 				
 				local pl = self:GetOwner()
 
-				pl.melonTeam = _team
+				pl.mw_melonTeam = _team
 				
 				newMarine:SetOwner(pl)
 
@@ -128,13 +132,15 @@ function ENT:FreeUnits()
 		local originalColor = self:GetColor()
 		self:SetColor(Color(self:GetColor().r/2, self:GetColor().g/2, self:GetColor().b/2, 255))
 		timer.Simple(10, function()
-			self.canEatUnits = true
-			self:SetColor(originalColor)
+			if (IsValid(self)) then
+				self.canEatUnits = true
+				self:SetColor(originalColor)
+			end
 		end)
 	end
 end
 
 function ENT:OnRemove()
-	UpdatePopulation(-self.population, self:GetNWInt("melonTeam", 0))
+	MW_UpdatePopulation(-self.population, self:GetNWInt("mw_melonTeam", 0))
 	self:FreeUnits()
 end

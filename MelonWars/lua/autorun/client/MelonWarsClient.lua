@@ -1,33 +1,30 @@
 hook.Add( "Initialize", "start", function()
-	LocalPlayer().selecting = 1
-	LocalPlayer().selStart = Vector(0,0,0)
-	LocalPlayer().selEnd = Vector(0,0,0)
-	LocalPlayer().toolCost = -1
-	LocalPlayer().hudColor = Color(10,10,10,20)
+	LocalPlayer().mw_selecting = 1
+	LocalPlayer().mw_selStart = Vector(0,0,0)
+	LocalPlayer().mw_selEnd = Vector(0,0,0)
+	LocalPlayer().mw_toolCost = -1
+	LocalPlayer().mw_hudColor = Color(10,10,10,20)
 	
-	LocalPlayer().hover = 0
-	LocalPlayer().menu = 0
-	LocalPlayer().selectTimer = 0
-	LocalPlayer().spawnTimer = 0
-	LocalPlayer().cooldown = 0
-	LocalPlayer().frame = nil
+	LocalPlayer().mw_hover = 0
+	LocalPlayer().mw_menu = 0
+	LocalPlayer().mw_selectTimer = 0
+	LocalPlayer().mw_spawnTimer = 0
+	LocalPlayer().mw_cooldown = 0
+	LocalPlayer().mw_frame = nil
 	
-	LocalPlayer().units = 0
-	LocalPlayer().credits = 0
-
-	--net.Start("RequestServerTeams")
-	--net.SendToServer()
+	LocalPlayer().mw_units = 0
+	LocalPlayer().mw_credits = 0
 	
 	foundMelons = {}
 
 	return true 
 end)
 
-team_colors  = {Color(255,50,50,255),Color(50,50,255,255),Color(255,200,50,255),Color(30,200,30,255),Color(255,50,255,255),Color(100,255,255,255),Color(255,120,0,255),Color(255,100,150,255)}
+mw_team_colors  = {Color(255,50,50,255),Color(50,50,255,255),Color(255,200,50,255),Color(30,200,30,255),Color(255,50,255,255),Color(100,255,255,255),Color(255,120,0,255),Color(255,100,150,255)}
 
 hook.Add( "Think", "update", function()	
-	if (selecting) then
-		LocalPlayer().selEnd = LocalPlayer():GetEyeTrace().HitPos
+	if (mw_selecting) then
+		LocalPlayer().mw_selEnd = LocalPlayer():GetEyeTrace().HitPos
 	end
 
 	local tr = LocalPlayer():GetEyeTrace()
@@ -44,99 +41,37 @@ net.Receive( "Selection", function( len, pl )
 	for i = 1,ammount do
         table.insert(foundMelons, net.ReadEntity())
     end
-	LocalPlayer():SetNWVector("selEnd", LocalPlayer():GetNWVector("selStart", Vector(0,0,0)))
-	LocalPlayer().selEnd = Vector(0,0,0)
+	LocalPlayer():SetNWVector("mw_selEnd", LocalPlayer():GetNWVector("mw_selStart", Vector(0,0,0)))
+	LocalPlayer().mw_selEnd = Vector(0,0,0)
 end )
 
 net.Receive( "RestartQueue", function( len, pl )
-	LocalPlayer().spawntime = CurTime()
+	LocalPlayer().mw_spawntime = CurTime()
 end)
---[[
-net.Receive( "SendContraption", function( len, pl )
-	local frame = vgui.Create("DFrame")
-	local w = 250
-	local h = 160
-	local cost = net.ReadInt(32)
-	local cons = net.ReadInt(32)
-	local freeze = net.ReadBool()
-	frame:SetSize(w,h)
-	frame:SetPos(ScrW()/2-w/2+150,ScrH()/2-h/3)
-	frame:SetTitle("Contraption Legalizer")
-	frame:MakePopup()
-	frame:ShowCloseButton()
-	local button = vgui.Create("DButton", frame)
-	button:SetSize(50,18)
-	button:SetPos(w-53,3)
-	button:SetText("x")
-	function button:DoClick()
-		frame:Remove()
-		frame = nil
-	end
-	if (cost != -1) then
-		local label = vgui.Create("DLabel", frame)
-		label:SetSize(200,30)
-		label:SetPos(20,40)
-		label:SetText("The contraption will cost "..cost)
-		if (cons > 0) then
-			label = vgui.Create("DLabel", frame)
-			label:SetSize(200,60)
-			label:SetPos(20,50)
-			label:SetText("Entities like thrusters, hoverballs, vehicles\n and alike will get removed. "..cons.." detected!")
-		end
-	else
-		local label = vgui.Create("DLabel", frame)
-		label:SetSize(200,30)
-		label:SetPos(20,40)
-		label:SetText("No contraption found")
-	end
 
-	if (freeze) then
-		label = vgui.Create("DLabel", frame)
-		label:SetSize(100,40)
-		label:SetPos(20,100)
-		label:SetText("Can't legalize.\nContraption is frozen.")
-	elseif (cons == -1) then
-		button = vgui.Create("DButton", frame)
-		button:SetSize(100,40)
-		button:SetPos(20,100)
-		button:SetText("Load")
-		function button:DoClick()
-			net.Start("ContraptionLoad")
-				--net.WriteInt(cvars.Number("mw_team"),8)
-			net.SendToServer()
-			frame:Remove()
-			frame = nil
-		end
-	else
-		button = vgui.Create("DButton", frame)
-		button:SetSize(100,40)
-		button:SetPos(20,100)
-		button:SetText("Save")
-		function button:DoClick()
-			ContraptionSave(LocalPlayer():GetEyeTrace().Entity)
-			--net.Start("ContraptionSave")
-			--	net.WriteEntity(LocalPlayer():GetEyeTrace().Entity)
-			--net.SendToServer()
-			frame:Remove()
-			frame = nil
-		end
-	end
+mrtsMessageReceivingEntity = nil
+mrtsMessageReceivingState = "idle"
+mrtsNetworkBuffer = ""
 
-	button = vgui.Create("DButton", frame)
-	button:SetSize(100,40)
-	button:SetPos(130,100)
-	button:SetText("Cancel")
-	function button:DoClick()
-		frame:Remove()
-		frame = nil
-	end
-end )]]
+net.Receive("BeginContraptionSaveClient", function(len, pl)
+	mrtsMessageReceivingState = net.ReadString()
+	mrtsMessageReceivingEntity = net.ReadEntity()
+	mrtsNetworkBuffer = ""
+end)
 
 net.Receive("ContraptionSaveClient", function (len, pl)
-	local dubJSON = net.ReadString()
-	local name = net.ReadString()
-	file.CreateDir( "melonwars/contraptions" )
-	file.Write( "melonwars/contraptions/"..name..".txt", dubJSON )
+	local last = net.ReadBool()
+	local size = net.ReadUInt(16)
+	local data = net.ReadData(size)
+	mrtsNetworkBuffer = mrtsNetworkBuffer..data
+	if (last) then
+		local text = util.Decompress(mrtsNetworkBuffer)
+		file.CreateDir( "melonwars/contraptions" )
+		file.Write( "melonwars/contraptions/"..mrtsMessageReceivingState..".txt", text )
+		mrtsMessageReceivingEntity = nil
+		mrtsMessageReceivingState = "idle"
+		mrtsNetworkBuffer = ""
+	end
 end)
 
 hook.Add("OnTextEntryGetFocus", "disableKeyboard", function (panel)
@@ -157,9 +92,9 @@ end )
 
 hook.Add( "PreDrawHalos", "AddHalos", function()
 
-	if (istable(foundMelons)) then
+	--[[if (istable(foundMelons)) then
 		halo.Add( foundMelons, Color( 255, 255, 100 ), 2, 2, 1, true, true )
-	end
+	end]]
 
 	local entityTable = {}
 	if (LocalPlayer():KeyDown(IN_WALK)) then
@@ -184,75 +119,55 @@ hook.Add( "PreDrawHalos", "AddHalos", function()
 	halo.Add( zoneTable, Color(200,200,200,255), 0, 3, 1, true, true )
 end)
 
-Laser = Material( "vgui/wave.png", "noclamp smooth" )
 hook.Add( "PostDrawTranslucentRenderables", "hud", function()
-	--local trace = LocalPlayer():GetEyeTrace()
 	local angle = LocalPlayer():EyeAngles()+Angle(-90,0,0)
-	--render.DrawLine( trace.HitPos, trace.HitPos + 8 * angle:Forward(), Color( 255, 0, 0 ), true )
-	--render.DrawLine( trace.HitPos, trace.HitPos + 8 * -angle:Right(), Color( 0, 255, 0 ), true )
-	--render.DrawLine( trace.HitPos, trace.HitPos + 8 * angle:Up(), Color( 0, 0, 255 ), true )
-	if (istable(foundMelons)) then
-		
-		render.SetMaterial( Laser )
-		for k, v in pairs( foundMelons ) do
-			if (IsValid(v)) then
-				local hp = v:GetNWFloat("health", 0)
-				local maxhp = v:GetNWFloat("maxhealth", 1)
-				local vpos = v:WorldSpaceCenter()+Vector(0,0,10)+angle:Forward()*20-angle:Right()*hp/2
-				cam.Start3D2D( vpos, angle, 1 )
-					surface.SetDrawColor( Color( 255*math.min((1-hp/maxhp)*2,1), 255*math.min(hp/maxhp*2,1), 0, 255 ) )
-					surface.DrawRect( 0, 0, 5, hp )
-					surface.SetDrawColor( Color( 0,0,0, 255 ) )
-					surface.DrawOutlinedRect( 0, 0, 5, hp )
-				cam.End3D2D()
-				if (v:GetNWBool("moving", false)) then
-					render.DrawBeam( v:WorldSpaceCenter(), v:GetNWVector("targetPos"), 1, 1, 1, Color( 0, 255, 0, 100 ) )
-				end
-				if (v:GetNWEntity("targetEntity", nil):IsValid() && v:GetNWEntity("targetEntity", nil) != nil) then
-					render.DrawBeam( v:WorldSpaceCenter(), v:GetNWEntity("targetEntity"):WorldSpaceCenter(), 1, 1, 1, Color( 255, 0, 0, 100 ) )
-				end
-				if (v:GetNWEntity("followEntity", nil):IsValid()) then
-					render.DrawBeam( v:WorldSpaceCenter(), v:GetNWEntity("followEntity"):WorldSpaceCenter(), 1, 1, 1, Color( 0, 50, 255, 100 ) )
-				end
-			end
-		end
-	end
 	
-	if (LocalPlayer().selecting and LocalPlayer():GetNWVector("selStart", Vector(0,0,0)) ~= Vector(0,0,0)) then
-		local selStart = LocalPlayer():GetNWVector("selStart", Vector(0,0,0))
-		local selEnd = LocalPlayer():GetNWVector("selEnd", Vector(0,0,0))
-		local radius = selStart:Distance(selEnd)/2
+	if (LocalPlayer().mw_selecting and LocalPlayer():GetNWVector("mw_selStart", Vector(0,0,0)) ~= Vector(0,0,0)) then
+		local mw_selStart = LocalPlayer():GetNWVector("mw_selStart", Vector(0,0,0))
+		local mw_selEnd = LocalPlayer():GetNWVector("mw_selEnd", Vector(0,0,0))
+		local radius = mw_selStart:Distance(mw_selEnd)/2
 		surface.SetDrawColor(Color( 0, 255, 0, 255 ))
-		cam.Start3D2D((selStart+selEnd)/2 + Vector(0,0,3), Angle(0,0,0), 3 )
+		cam.Start3D2D((mw_selStart+mw_selEnd)/2 + Vector(0,0,3), Angle(0,0,0), 3 )
 		for i = 1, 160 do
 			surface.DrawRect( math.sin(i/math.pi/8)*radius/3, math.cos(i/math.pi/8)*radius/3, 2, 2)
 		end
 		cam.End3D2D()
 	end
-	--surface.DrawRect( 0, 0, 8, 8 )
-	--render.DrawLine( Vector( 0, 0, 0 ), Vector( 8, 8, 8 ), Color( 100, 149, 237, 255 ), true )
-	
-	local points = ents.FindByClass( "ent_melon_cap_point" )
-	table.Add(points, ents.FindByClass( "ent_melon_outpost_point" ))
-	table.Add(points, ents.FindByClass( "ent_melon_mcguffin" ))
-	table.Add(points, ents.FindByClass( "ent_melon_water_tank" ))
-	if (istable(points)) then
-		render.SetMaterial( Laser )
-		for k, v in RandomPairs( points ) do
-			if (IsValid(v)) then
-				local captured = {0,0,0,0,0,0,0,0}
-				local capturing = 0
-				for i=1, 8 do
-					if (v:GetNWInt("captured"..tostring(i), 0) > 0) then
-						local vpos = v:WorldSpaceCenter()+Vector(0,0,100)+angle:Forward()*10-angle:Right()*5/2
-						cam.Start3D2D( vpos, angle, 1 )
-							surface.SetDrawColor( team_colors[i] )
-							surface.DrawRect( 0, 0, v:GetNWInt("captured"..tostring(i), 0)/2, 5 )
-							surface.SetDrawColor( Color( 0,0,0, 255 ) )
-							surface.DrawOutlinedRect( 0, 0, 50, 5 )
-						cam.End3D2D()
+
+	if (istable(foundMelons)) then
+		surface.SetDrawColor(Color( 0, 255, 0, 255 ))
+		draw.NoTexture()
+		for k, v in pairs( foundMelons ) do
+			if (v:IsValid()) then
+				local floorTrace = v.floorTrace
+				if (floorTrace != nil) then
+					if (floorTrace.Hit) then
+						local hp = v:GetNWFloat("health", 0)
+						if (hp > 0) then
+							local maxhp = v:GetNWFloat("maxhealth", 1)
+							local pos = v:GetPos()+v:OBBCenter()
+							if (v.circleSize ~= nil) then
+								local polySize = v.circleSize
+								local poly = {
+									{ x = polySize, y = 0 },
+									{ x = polySize*0.72, y = polySize*0.72 },
+									{ x = 0, y = polySize },
+									{ x = -polySize*0.72, y = polySize*0.72 },
+									{ x = -polySize, y = 0 },
+									{ x = -polySize*0.72, y = -polySize*0.72 },
+									{ x = 0, y = -polySize },
+									{ x = polySize*0.72, y = -polySize*0.72 }
+								}
+								surface.SetDrawColor(Color( 255*math.min((1-hp/maxhp)*2,1), 255*math.min(hp/maxhp*2,1), 0, 255 ))
+								cam.Start3D2D(Vector(pos.x, pos.y, floorTrace.HitPos.z+1), floorTrace.HitNormal:Angle()+Angle(90,0,0), 1 )
+									surface.DrawPoly( poly )
+								cam.End3D2D()
+							end
+						end
 					end
 				end
+			else
+				table.RemoveByValue( foundMelons, v )
 			end
 		end
 	end
@@ -280,14 +195,114 @@ hook.Add( "HUDPaint", "hud", function()
 		  	surface.DrawRect( pos.x - 3, pos.y + 6, 6, 6 )
 		  end
 	end
+
+	local MainBases = ents.FindByClass( "ent_melon_main_building*" )
+
+	for k, v in pairs(MainBases) do
+		local drw = false
+	    if ((LocalPlayer():GetPos()-v:GetPos()):LengthSqr() < 800000) then
+	    	drw = true
+	    elseif (CurTime() < v:GetNWFloat("lastHit", 0)+5) then
+	    	drw = true
+	    end
+
+	    if (drw) then
+		    local pos = (v:GetPos()+Vector(0,0,v:OBBMaxs().z)):ToScreen()
+			pos = Vector(pos.x, pos.y-100)
+			--local border = ScrH()/2
+			--local center = Vector(ScrW()/2, ScrH()/2)
+			--if ((pos-center):LengthSqr() > border*border) then
+			--	pos = center+(pos-center):GetNormalized()*border
+			--end
+			local percent = v:GetNWInt("health", 3)/v:GetNWInt("maxhealth", 10)
+			surface.SetDrawColor(Color(0,0,0,255))
+		  	surface.DrawRect( pos.x - 15, pos.y - 55, 30, 160 )
+			surface.SetDrawColor(Color(255,0,0,255))
+		  	surface.DrawRect( pos.x - 10, pos.y + 100 -150*(percent), 20, 150*(percent) )
+		end
+	end
+
+	if (istable(foundMelons)) then
+		for k, v in pairs( foundMelons ) do
+			if (v:IsValid()) then
+				--[[local hp = v:GetNWFloat("health", 0)
+				local maxhp = v:GetNWFloat("maxhealth", 1)
+				if (hp > 0) then
+					local pos = v:GetPos():ToScreen()
+					local clampedBar = math.max(15, math.min(100, hp))
+					surface.SetDrawColor(Color( 0, 0, 0, 100 ))
+					surface.DrawOutlinedRect( pos.x - clampedBar/2 -1, pos.y - 61, clampedBar +2, 13 )
+					surface.SetDrawColor(Color( 255*math.min((1-hp/maxhp)*2,1), 255*math.min(hp/maxhp*2,1), 0, 100 ))
+					surface.DrawRect( pos.x - clampedBar/2, pos.y - 60, clampedBar, 11 )
+
+					surface.SetFont( "Trebuchet18" )
+					surface.SetTextColor( 0, 0, 0, 255 )
+					surface.SetTextPos( pos.x - 6, pos.y - 63 )
+					surface.DrawText( math.Round(hp))]]
+
+					local fe = v:GetNWEntity("followEntity", nil)
+					if (fe:IsValid() && fe != v) then
+						pos = fe:WorldSpaceCenter():ToScreen()
+						DrawMelonCross(pos, Color( 0, 150, 255, 255 ))
+					elseif (v:GetNWBool("moving", false)) then
+						pos = v:GetNWVector("targetPos"):ToScreen()
+						DrawMelonCross(pos, Color( 0, 255, 0, 255 ))
+					end
+
+					local te = v:GetNWEntity("targetEntity", nil)
+					if (te:IsValid() && te != v) then
+						pos = te:WorldSpaceCenter():ToScreen()
+						DrawMelonCross(pos, Color( 255, 0, 0, 255 ))
+					end
+				end
+			--end
+		end
+	end
+
+	local points = ents.FindByClass( "ent_melon_cap_point" )
+	table.Add(points, ents.FindByClass( "ent_melon_outpost_point" ))
+	table.Add(points, ents.FindByClass( "ent_melon_mcguffin" ))
+	table.Add(points, ents.FindByClass( "ent_melon_water_tank" ))
+	if (istable(points)) then
+		for k, v in RandomPairs( points ) do
+			if (IsValid(v)) then
+				if ((LocalPlayer():GetPos()-v:GetPos()):LengthSqr() < 800000) then
+					local captured = {0,0,0,0,0,0,0,0}
+					local capturing = 0
+					for i=1, 8 do
+						if (v:GetNWInt("captured"..tostring(i), 0) > 0) then
+							local vpos = v:WorldSpaceCenter()+Vector(0,0,100)
+							local pos = vpos:ToScreen()
+							surface.SetDrawColor(Color( 0, 0, 0, 255 ))
+							surface.DrawRect( pos.x - 5 -3, pos.y - 123, 10 +6, 106 )
+							surface.SetDrawColor(Color( 255, 255, 255, 255 ))
+							surface.DrawRect( pos.x - 5 , pos.y - 120, 10, 100 )
+							surface.SetDrawColor(mw_team_colors[i])
+							local capture = v:GetNWInt("captured"..tostring(i), 0)
+							surface.DrawRect( pos.x - 5 , pos.y - 20 - capture, 10 , capture )
+						end
+					end
+				end
+			end
+		end
+	end
 end )
 
-net.Receive( "TeamCredits", function( len, pl )
-	LocalPlayer().credits = net.ReadInt(16)
+function DrawMelonCross (pos, _color)
+	surface.SetDrawColor(Color( 0, 0, 0, 255 ))
+	surface.DrawRect( pos.x-2, pos.y-10, 9, 25 )
+	surface.DrawRect( pos.x-10, pos.y-2, 25, 9 )
+	surface.SetDrawColor(_color)
+	surface.DrawRect( pos.x, pos.y-8, 5, 21 )
+	surface.DrawRect( pos.x-8, pos.y, 21, 5 )
+end
+
+net.Receive( "MW_TeamCredits", function( len, pl )
+	LocalPlayer().mw_credits = net.ReadInt(32)
 end )
 
-net.Receive( "TeamUnits", function( len, pl )
-	LocalPlayer().units = net.ReadInt(16)
+net.Receive( "MW_TeamUnits", function( len, pl )
+	LocalPlayer().mw_units = net.ReadInt(16)
 end )
 
 net.Receive( "ChatTimer", function( len, pl )
@@ -297,10 +312,32 @@ end )
 net.Receive( "RequestContraptionLoadToClient", function( len, pl )
 	local _file = net.ReadString()
 	local ent = net.ReadEntity()
-	net.Start("ContraptionLoad")
-		net.WriteString(file.Read( _file ))
+
+	local text = file.Read(_file)
+	local compressed_text = util.Compress( text )
+	if ( !compressed_text ) then compressed_text = text end
+	local len = string.len( compressed_text )
+	local send_size = 60000
+	local parts = math.ceil( len / send_size )
+	local start = 0
+	net.Start( "BeginContraptionLoad" )
 		net.WriteEntity(ent)
 	net.SendToServer()
+	for i = 1, parts do
+		local endbyte = math.min( start + send_size, len )
+		local size = endbyte - start
+		local data = compressed_text:sub( start + 1, endbyte + 1 )
+		net.Start( "ContraptionLoad" )
+			net.WriteBool( i == parts )
+			net.WriteUInt( size, 16 )
+			net.WriteData( data, size )
+		net.SendToServer()
+		start = endbyte
+	end
+	/*net.Start("ContraptionLoad")
+		net.WriteString(file.Read( _file ))
+		net.WriteEntity(ent)
+	net.SendToServer()*/
 end )
 
 net.Receive( "EditorSetTeam", function( len, pl )
@@ -331,14 +368,14 @@ net.Receive( "EditorSetTeam", function( len, pl )
 				net.WriteEntity(ent)
 				net.WriteInt(i, 4)
 			net.SendToServer()
-			ent:SetColor(team_colors[i])
-			ent.melonTeam = i
+			ent:SetColor(mw_team_colors[i])
+			ent.mw_melonTeam = i
 			frame:Remove()
 			frame = nil
 		end
 		button.Paint = function(s, w, h)
 			draw.RoundedBox( 6, 0, 0, w, h, Color(30,30,30,255) )
-			draw.RoundedBox( 4, 2, 2, w-4, h-4, team_colors[i] )
+			draw.RoundedBox( 4, 2, 2, w-4, h-4, mw_team_colors[i] )
 		end
 	end
 end )
@@ -383,7 +420,7 @@ net.Receive( "DrawWireframeBox", function( len, pl )
 	local min = net.ReadVector()
 	local max = net.ReadVector()
 	render.DrawWireframeBox( pos, Angle(0,0,0), min, max, Color(255,255,255,255), false )
-end )	
+end )
 
 net.Receive( "EditorSetWaypoint", function( len, pl )
 	local ent = net.ReadEntity()
@@ -436,109 +473,34 @@ net.Receive( "EditorSetWaypoint", function( len, pl )
 	end
 end )
 
---[[net.Receive( "EditorSetSpawnpoint", function( len, pl )
-	local ent = net.ReadEntity()
-	local waypoint = net.ReadInt(4)
-	local path = net.ReadInt(4)
-	local frame = vgui.Create("DFrame")
-	local w = 250
-	local h = 110
-	frame:SetSize(w,h)
-	frame:SetPos(ScrW()/2-w/2+150,ScrH()/2-h/3)
-	frame:SetTitle("Set Spawnpoint")
-	frame:MakePopup()
-	frame:ShowCloseButton()
-	local button = vgui.Create("DButton", frame)
-	button:SetSize(50,18)
-	button:SetPos(w-53,3)
-	button:SetText("x")
-	function button:DoClick()
-		frame:Remove()
-		frame = nil
+// New Year
+/*function MW_Firework(ent, amount, sizeMul)
+	local grounded = false
+	local tr = util.QuickTrace( ent:GetPos(), Vector(0,0,-20), ent )
+	if (tr.Hit) then
+		grounded = true
 	end
-	local label = vgui.Create("DLabel", frame)
-	label:SetPos(20,40)
-	label:SetText("Spawnpoint")
-	local spawnpointwang = vgui.Create("DNumberWang", frame)
-	spawnpointwang:SetPos(20,55)
-	if (ent.spawnpoint == nil) then ent.spawnpoint = 1 end
-	spawnpointwang:SetValue(ent.spawnpoint)
-	button = vgui.Create("DButton", frame)
-	button:SetSize(100,50)
-	button:SetPos(120,35)
-	button:SetText("Done")
-	function button:DoClick()
-		net.Start("ServerSetWaypoint")
-			net.WriteEntity(ent)
-			net.WriteInt(spawnpointwang:GetValue(), 8)
-		net.SendToServer()
-		ent.spawnpoint = spawnpointwang:GetValue()
-		frame:Remove()
-		frame = nil
+	local particleSize = math.random(12, 18)
+	local fireworkSize = math.random(300, 400)*sizeMul
+	local teamColor = ent:GetColor();
+	local emitter = ParticleEmitter( ent:GetPos() ) -- Particle emitter in this position
+	for i = 0, amount do -- SMOKE
+		local part = emitter:Add( "effects/yellowflare", ent:GetPos() ) -- Create a new particle at pos
+		if ( part ) then
+			part:SetDieTime( math.Rand(1.0, 4.0)*sizeMul ) -- How long the particle should "live"
+			local c = math.Rand(0.0, 1.0)
+			local _c = 1-c
+			part:SetColor(teamColor.r*c+255*_c,teamColor.g*c+255*_c,teamColor.b*c+255*_c)
+			part:SetStartAlpha( 255 ) -- Starting alpha of the particle
+			part:SetEndAlpha( 0 ) -- Particle size at the end if its lifetime
+			part:SetStartSize( particleSize ) -- Starting size
+			part:SetEndSize( 0 ) -- Size when removed
+			part:SetAirResistance(300)
+			part:SetGravity( Vector( 0, 0, -20 ) ) -- Gravity of the particle
+			local vec = AngleRand():Forward()*fireworkSize
+			if (grounded and vec.z < 0) then vec.z = -vec.z end
+			part:SetVelocity( vec ) -- Initial velocity of the particle
+		end
 	end
-end )]]
-
-
---function TeamUpdate ( newTeam )
-	
---end
-
---net.Receive( "TeamUpdate", function ( len, pl )
-	--print("Calling team update")
-	--local newTeam = net.ReadInt(4)
-	--TeamUpdate ( melonTeam )
-	
-	--print("Executing team update")
-	--LocalPlayer().playerTeam = LocalPlayer():GetInfoNum("mw_team", 1)
-	--local newColor = Color(100,100,100,255)
-	--if (newTeam == 1) then
-	--	newColor = Color(255,50,50,255)
-	--end
-	--if (newTeam == 2) then
-	--	newColor = Color(50,50,255,255)
-	--end
-	--if (newTeam == 3) then
-	--	newColor = Color(255,255,50,255)
-	--end
-	--if (newTeam == 4) then
-	--	newColor = Color(30,200,30,255)
-	---end
-	--if (newTeam == 5) then
-	--	newColor = Color(255,50,255,255)
-	--end
-	--if (newTeam == 6) then
-	--	newColor = Color(50,255,255,255)
-	--end
-	--print(LocalPlayer())
-	--print(LocalPlayer().hudColor)
-	--LocalPlayer().hudColor = newColor
-	--print("Updated color, maybe")
-	--print(LocalPlayer().hudColor)
---end )
-
---hook.Add( "HUDPaint", "HUDPaint_DrawABox", function()
---
---	if (cvars.Number("mw_hud_enable") == 1) then
---
---		if (LocalPlayer().playerTeam == nil) then
---			LocalPlayer().playerTeam = 1
---		end	
---		if (LocalPlayer().hudColor == nil) then
---			LocalPlayer().hudColor = Color(100,100,100,255)
---		end	
---
---		local x = 250
---		local y = 150
---		
---		draw.RoundedBox( 30, ScrW()/2-x/2, ScrH()-y, x, y, LocalPlayer().hudColor )
---		draw.RoundedBox( 15, ScrW()/2-x/2+15, ScrH()-y+15, x-30, y-30, Color(0,0,0,230) )
---		surface.SetFont( "DermaLarge" )
---		surface.SetTextColor( 255, 255, 255, 255 )
---		surface.SetTextPos( ScrW()/2-x/2+30, ScrH()-y+20 )
---		surface.DrawText( tostring(LocalPlayer().toolName) )
---		surface.SetTextPos( ScrW()/2-x/2+30, ScrH()-y+55 )
---		surface.DrawText( "Cost: "..tostring(LocalPlayer().toolCost) )
---		surface.SetTextPos( ScrW()/2-x/2+30, ScrH()-y+90 )
---		surface.DrawText( "Credits: "..tostring(LocalPlayer().credits) )
---	end
---end )
+	emitter:Finish()
+end*/

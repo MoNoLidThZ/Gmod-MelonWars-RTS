@@ -7,7 +7,7 @@ function ENT:Initialize()
 
 	--print("Started Initialize")
 
-	Defaults ( self )
+	MW_Defaults ( self )
 
 	--print("Changing stats")
 
@@ -20,10 +20,14 @@ function ENT:Initialize()
 	self.range = 500
 	self.spread = 0.5
 	self.damageDeal = 30
+
+	self.buildingDamageMultiplier = 0.7
 	
 	self.shotOffset = Vector(0,0,10)
+
+	self.angularDamping = 10
 	
-	self:SetPos(self:GetPos()+Vector(0,0,12))
+	//self:SetPos(self:GetPos()+Vector(0,0,12))
 	
 	self.nextShot = CurTime()+3
 	
@@ -31,7 +35,7 @@ function ENT:Initialize()
 	
 	self.population = 3
 	
-	Setup ( self )
+	MW_Setup ( self )
 	
 	--print("Finished Initialize")
 	construct.SetPhysProp( self:GetOwner() , self, 0, nil,  { GravityToggle = true, Material = "ice" } )
@@ -45,25 +49,21 @@ function ENT:SlowThink ( ent )
 	--local vel = ent.phys:GetVelocity()
 	--ent.phys:SetAngles( ent.Angles )
 	--ent.phys:SetVelocity(vel)
-	DefaultThink ( ent )
+	MW_UnitDefaultThink ( ent )
 
 end
 
 function ENT:PhysicsUpdate()
-	local mul = 10
-	local phys = self:GetPhysicsObject()
-	local forcePoint = self:GetPos()+self:GetAngles():Up()*mul
-	local forceTarget = self:GetPos()+Vector(0,0,mul)
-	phys:ApplyForceOffset( (forceTarget-forcePoint)*mul, forcePoint )
-	forcePoint = self:GetPos()+self:GetAngles():Up()*-mul
-	forceTarget = self:GetPos()+Vector(0,0,-mul)
-	phys:ApplyForceOffset( (forceTarget-forcePoint)*mul, forcePoint )
-	phys:ApplyForceCenter( Vector(0,0,(forceTarget-forcePoint):Length()*20))
+
+	local inclination = self:Align(self:GetAngles():Up(), Vector(0,0,1), 1000)
+	self.phys:ApplyForceCenter( Vector(0,0,inclination*100))
+
+	self:DefaultPhysicsUpdate()
 end
 
 function ENT:Shoot ( ent )
 	if (ent:GetVelocity():Length() < 15 && ent.nextShot < CurTime()) then
-		DefaultShoot ( ent )
+		MW_DefaultShoot ( ent )
 		for k, v in pairs( player.GetAll() ) do
 			sound.Play("physics/metal/metal_computer_impact_bullet1.wav", v:GetPos(), 40, 90, 1)
 			sound.Play("weapons/357/357_fire2.wav", v:GetPos(), 40, 80, 1)
@@ -77,5 +77,5 @@ function ENT:Shoot ( ent )
 end
 
 function ENT:DeathEffect ( ent )
-	DefaultDeathEffect ( ent )
+	MW_DefaultDeathEffect ( ent )
 end

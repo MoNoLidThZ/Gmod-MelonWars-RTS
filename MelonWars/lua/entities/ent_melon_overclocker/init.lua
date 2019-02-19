@@ -6,7 +6,7 @@ include('shared.lua')
 function ENT:Initialize()
 	--print("Started Initialize")
 
-	Defaults ( self )
+	MW_Energy_Defaults ( self )
 
 	self.modelString = "models/props_combine/combine_light001a.mdl"
 	self.maxHP = 100
@@ -20,25 +20,22 @@ function ENT:Initialize()
 	self.range = 50
 
 	self.population = 0
-	self:SetNWInt("energy", 0)
-	self:SetNWInt("maxenergy", 100)
+	self.capacity = 0
 	self:SetNWVector("energyPos", Vector(0,0,0))
 	--print("Finished changing stats")
 	--self:BarrackInitialize()
-	self.population = 3
+	self.population = 0
 	self.canBeSelected = false
 
-	Setup ( self )
+	MW_Energy_Setup ( self )
 
 	self.connection = nil
 
-	self:SetNWBool("active", false)
-	--InciteConnections(self)
-	CalculateConnections(self)
-	self:SetNWBool("canGive", false)
+	self:SetNWBool("active", true)
+
 	self:SetNWFloat("overdrive", 0)
+
 	self:GetPhysicsObject():EnableMotion(false)
-	--print("Finished Initialize")
 
 	self:NextThink(CurTime()+1)
 	timer.Simple(0.5, function () self:ConnectToBarrack() end)
@@ -51,7 +48,7 @@ function ENT:ConnectToBarrack()
 	local foundEntities = {}
 
 	for k, v in pairs(entities) do
-		if ((string.StartWith(v:GetClass(), "ent_melon_barracks") or v:GetClass() == "ent_melon_contraption_assembler") and v:GetNWInt("melonTeam", 0) == self:GetNWInt("melonTeam", 0)) then -- si no es un aliado
+		if ((string.StartWith(v:GetClass(), "ent_melon_barracks") or v:GetClass() == "ent_melon_contraption_assembler") and v:GetNWInt("mw_melonTeam", 0) == self:GetNWInt("mw_melonTeam", 0)) then -- si no es un aliado
 			table.insert(foundEntities, v)
 		end
 	end
@@ -70,8 +67,8 @@ function ENT:ConnectToBarrack()
 		constraint.Rope( self, closestEntity, 0, 0, Vector(0,0,10), Vector(0,0,5), self:GetPos():Distance(closestEntity:GetPos()), 0, 0, 10, "cable/physbeam", false )
 	else
 		for k, v in pairs(player.GetAll()) do
-			if (v:GetInfoNum("mw_team", 0) == self:GetNWInt("melonTeam", 0)) then
-				v:PrintMessage( HUD_PRINTTALK, "///// Over-Clockers must be spawned next to a Barracks" )
+			if (v:GetInfoNum("mw_team", 0) == self:GetNWInt("mw_melonTeam", 0)) then
+				v:PrintMessage( HUD_PRINTTALK, "///// Over-Clockers must be spawned next to Barracks" )
 			end
 		end
 		self:Remove()
@@ -82,16 +79,15 @@ function ENT:Think(ent)
 	if (!IsValid(self.connection)) then
 		self:DeathEffect( self )
 	else
-		local energy = math.Round(self:GetNWInt("energy", 0))
-		local max = self:GetNWInt("maxenergy", 0)
-		self:SetNWString("message", "Energy: "..energy.." / "..max)
-		PullEnergy(self)
 		if (self:GetNWBool("active", true) and (!self.connection:GetNWBool("spawned", false) or self.connection:GetClass() == "ent_melon_contraption_assembler") and self.connection:GetNWBool("active", false)) then
-			if (energy > 10) then
+			if (self:DrainPower(10)) then
 				self.connection:SetNWFloat("overdrive", self.connection:GetNWFloat("overdrive", 0)+0.125)
-				self:SetNWInt("energy", self:GetNWInt("energy", 0)-10)
 			end
+			self:SetNWString("message", "Working")
+		else
+			self:SetNWString("message", "Idle")
 		end
+		self:Energy_Add_State()
 	end
 end
 
@@ -104,7 +100,7 @@ function ENT:Shoot ( ent )
 end
 
 function ENT:DeathEffect ( ent )
-	DefaultDeathEffect ( ent )
+	MW_DefaultDeathEffect ( ent )
 end
 
 function ENT:BarrackSlowThink()

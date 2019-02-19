@@ -14,10 +14,36 @@ function ENT:Draw()
 	end
 end
 
+function ENT:Initialize()
+	self.circleSize = 0
+end
+
+function ENT:Think()
+	local tr = util.TraceLine( {
+	start = self:GetPos(),
+	endpos = self:GetPos()+Vector(0,0,-170),
+	filter = function( ent ) if ( ent:GetClass() == "prop_physics" ) then return true end end,
+	mask = bit.bor(MASK_SOLID,MASK_WATER)
+	} )
+	self.floorTrace = tr
+
+	if (self.circleSize == 0) then
+		local baseSize = self:GetNWFloat("baseSize", -1)
+		if (baseSize > -1) then
+			self.circleSize = baseSize
+		end
+	end
+
+	self:ClientThink()
+end
+
+function ENT:ClientThink()
+end
+
 function BarrackDraw(self, offset)
-	if (cvars.Number("mw_team") == self:GetNWInt("melonTeam", -1)) then
+	if (cvars.Number("mw_team") == self:GetNWInt("mw_melonTeam", -1)) then
 		render.SetMaterial( Material( "color" ) )
-        render.DrawBeam( self:WorldSpaceCenter(), self:GetNWVector("targetPos"), 1, 1, 1, Color( 0, 255, 0, 100 ) )
+        --render.DrawBeam( self:WorldSpaceCenter(), self:GetNWVector("targetPos"), 1, 1, 1, Color( 0, 255, 0, 100 ) )
         local angle = LocalPlayer():EyeAngles()+Angle(-90,0,0)
         local vpos = self:WorldSpaceCenter()+Vector(0,0,16)+Vector(0,0,offset)+angle:Forward()*10-angle:Right()*5/2
         local NST = self:GetNWFloat("nextSlowThink", 0)
@@ -88,3 +114,8 @@ function BarrackDraw(self, offset)
 		cam.End3D2D()
 	end
 end
+
+// New Year
+/*function ENT:OnRemove()
+	MW_Firework(self, 50, 1)
+end*/

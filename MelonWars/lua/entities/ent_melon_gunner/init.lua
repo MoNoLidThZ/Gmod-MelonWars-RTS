@@ -7,7 +7,7 @@ function ENT:Initialize()
 
 	--print("Started Initialize")
 
-	Defaults ( self )
+	MW_Defaults ( self )
 
 	--print("Changing stats")
 
@@ -19,19 +19,22 @@ function ENT:Initialize()
 	self.maxHP = 30
 	self.range = 300
 	
-	self.population = 3
+	self.population = 2
+	self.buildingDamageMultiplier = 0.8
+
+	self.sphereRadius = 9
 	
 	self.shotSound = "weapons/ar1/ar1_dist2.wav"
 	self.tracer = "AR2Tracer"
 	
 	self.slowThinkTimer = 1
 	self.spinup = 3
-	self.maxspinup = 2
-	self.minspinup = 0.2
+	self.maxspinup = 3
+	self.minspinup = 0.6
 	
 	--print("Finished changing stats")
 	
-	Setup ( self )
+	MW_Setup ( self )
 	
 	--print("Finished Initialize")
 	
@@ -49,20 +52,20 @@ function ENT:SlowThink ( ent )
 			self.spinup = self.maxspinup
 		end
 	end
-	DefaultThink ( ent )
+	MW_UnitDefaultThink ( ent )
 end
 
 function ENT:Shoot ( ent )
-	DefaultShoot ( ent )
+	MW_DefaultShoot ( ent )
 	for i = 1, 2 do
 		timer.Simple( i*self.spinup/3, function()
 			if (IsValid(ent)) then
-				DefaultShoot ( ent )
+				MW_DefaultShoot ( ent )
 			end
 		end)
 	end
 	if (self.spinup > self.minspinup) then
-		self.spinup = self.spinup - 0.5
+		self.spinup = self.spinup - 0.6
 		if (self.spinup < self.minspinup) then
 			self.spinup = self.minspinup
 		end
@@ -70,5 +73,5 @@ function ENT:Shoot ( ent )
 end
 
 function ENT:DeathEffect ( ent )
-	DefaultDeathEffect ( ent )
+	MW_DefaultDeathEffect ( ent )
 end

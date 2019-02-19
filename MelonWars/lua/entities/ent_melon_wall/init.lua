@@ -25,5 +25,5 @@ function ENT:Initialize()
 end
 
 function ENT:PropDeathEffect ( ent )
-	PropDefaultDeathEffect ( ent )
+	MW_PropDefaultDeathEffect ( ent )
 end

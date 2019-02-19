@@ -1,24 +1,27 @@
 -- ( Some lines from the cl_spawnmenu.lua in the sandbox GM )
 --function GM:Initialize()
 --Net vars para mandar el equipo y los creditos al cliente
-util.AddNetworkString( "TeamCredits" )
-util.AddNetworkString( "TeamUpdate" )
-util.AddNetworkString( "TeamUnits" )
-util.AddNetworkString( "UpdateClientInfo" )
-util.AddNetworkString( "UpdateServerInfo" )
+util.AddNetworkString( "MW_TeamCredits" )
+util.AddNetworkString( "MW_TeamUpdate" )
+util.AddNetworkString( "MW_TeamUnits" )
+util.AddNetworkString( "MW_UpdateClientInfo" )
+util.AddNetworkString( "MW_UpdateServerInfo" )
 
-util.AddNetworkString( "SpawnUnit" )
+util.AddNetworkString( "MW_SpawnUnit" )
 util.AddNetworkString( "SpawnBase" )
+util.AddNetworkString( "SpawnBaseGrandWar" )
+util.AddNetworkString( "SpawnCapturePoint" )
+util.AddNetworkString( "SpawnOutpost" )
+util.AddNetworkString( "SpawnWaterTank" )
 --util.AddNetworkString( "SpawnTransport" )
-util.AddNetworkString( "SpawnProp" )
+util.AddNetworkString( "MW_SpawnProp" )
 util.AddNetworkString( "StartGame" )
 util.AddNetworkString( "SandboxMode" )
 
 util.AddNetworkString( "ToggleBarracks" )
+util.AddNetworkString( "MW_Activate" )
 util.AddNetworkString( "ActivateGate" )
 util.AddNetworkString( "ActivateWaypoints" )
-
-util.AddNetworkString( "DestroyUnitTransport" )
 util.AddNetworkString( "PropellerReady" )
 util.AddNetworkString( "UseWaterTank" )
 
@@ -30,8 +33,11 @@ util.AddNetworkString( "UpdateClientTeams" )
 util.AddNetworkString( "UpdateServerTeams" )
 util.AddNetworkString( "RequestServerTeams" )
 
+// Contraptions
 util.AddNetworkString( "ContraptionSave" )
+util.AddNetworkString( "BeginContraptionSaveClient" )
 util.AddNetworkString( "ContraptionSaveClient" )
+util.AddNetworkString( "BeginContraptionLoad" )
 util.AddNetworkString( "ContraptionLoad" )
 util.AddNetworkString( "RequestContraptionLoadToAssembler" )
 util.AddNetworkString( "RequestContraptionLoadToClient" )
@@ -53,7 +59,7 @@ util.AddNetworkString( "ChatTimer" )
 CreateConVar ( "mw_save_name", "default", 8192, "Set the name of the file to save with 'mw_save'" )
 CreateConVar ( "mw_save_path", "default", 8192, "Set the path of the file to save with 'mw_save'" )
 
-team_colors  = {Color(255,50,50,255),Color(50,50,255,255),Color(255,200,50,255),Color(30,200,30,255),Color(255,50,255,255),Color(100,255,255,255),Color(255,120,0,255),Color(10,30,70,255)}
+mw_team_colors  = {Color(255,50,50,255),Color(50,50,255,255),Color(255,200,50,255),Color(30,200,30,255),Color(255,50,255,255),Color(100,255,255,255),Color(255,120,0,255),Color(10,30,70,255)}
 
 function AddTabs()
 	spawnmenu.AddToolTab( "MelonWars", "#Unique_Name", "icon16/wrench.png" )
@@ -61,100 +67,19 @@ end
 -- Hook the Tab to the Spawn Menu
 hook.Add( "AddToolMenuTabs", "MelonWars", AddTabs )
 
-teamCredits = {2000,2000,2000,2000,2000,2000,2000,2000}
-teamUnits = {0,0,0,0,0,0,0,0}
+mw_teamCredits = {2000,2000,2000,2000,2000,2000,2000,2000}
+mw_teamUnits = {0,0,0,0,0,0,0,0}
 teamUnlocks = {0,0,0,0,0,0,0,0}
 
 teamgrid = {}
 
--- That way you are overriding the default hook
--- you can use hook.Add to make more functions get called when this event occurs
-
-function ExchangeEnergy (ent)
-
-	local energytotal = 0
-	local capacitytotal = 0
-	local percentage = 0
-	for k, v in pairs(ent.connections) do
-		if (v:GetNWBool("canGive", false) and v.spawned) then
-			energytotal = energytotal + v:GetNWInt("energy", 0)
-			capacitytotal = capacitytotal + v:GetNWInt("maxenergy", 0)
-		end
-	end
-	energytotal = energytotal + ent:GetNWInt("energy", 0)
-	capacitytotal = capacitytotal + ent:GetNWInt("maxenergy", 0)
-	if (capacitytotal != 0) then
-		percentage = energytotal/capacitytotal
-		for k, v in pairs(ent.connections) do
-			if (v:GetNWBool("canGive", false) and v.spawned) then
-				v:SetNWInt("energy", percentage*v:GetNWInt("maxenergy", 0))
-			end
-		end
-		ent:SetNWInt("energy", percentage*ent:GetNWInt("maxenergy", 0))
-	end
-end
-
-function PullEnergy (ent)
-	local energytotal = 0
-	local capacitytotal = 0
-	local percentage = 0
-	for k, v in pairs(ent.connections) do
-		if (v:GetNWBool("canGive", false) and v.spawned) then
-			energytotal = energytotal + v:GetNWInt("energy", 0)
-			capacitytotal = capacitytotal + v:GetNWInt("maxenergy", 0)
-		end
-	end
-	--energytotal = energytotal + ent:GetNWInt("energy", 0)
-	--capacitytotal = capacitytotal + ent:GetNWInt("maxenergy", 0)
-	if (capacitytotal != 0) then
-		local suckedEnergy = math.min(energytotal, ent:GetNWInt("maxenergy", 0) - ent:GetNWInt("energy", 0))
-		energytotal = energytotal - suckedEnergy
-		percentage = energytotal/capacitytotal
-		for k, v in pairs(ent.connections) do
-			if (v:GetNWBool("canGive", false) and v.spawned) then
-				v:SetNWInt("energy", percentage*v:GetNWInt("maxenergy", 0))
-			end
-		end
-		ent:SetNWInt("energy", ent:GetNWInt("energy", 0)+suckedEnergy)
-	end
-end
-
-function CalculateConnections(ent)
-	timer.Simple(0.05, function ()
-		constraint.RemoveConstraints( ent, "Rope" )
-		local conammount = 0
-		local a = 100
-		while (conammount < 5 and a < 700) do
-			ent.connections = ents.FindInSphere( ent:GetPos(), a )
-			for i = table.Count(ent.connections), 1, -1 do
-				if (ent.connections[i] == ent or ent.connections[i]:GetNWInt("energy", -123) == -123 or ent:GetNWInt("melonTeam", -1) != ent.connections[i]:GetNWInt("melonTeam", -1)) then
-					table.remove(ent.connections, i)
-				end
-			end
-
-			for k, v in pairs(ent.connections) do
-				if (conammount < 5) then
-					conammount = conammount + 1
-				end
-			end
-			a = a+200
-		end
-
-		for k, v in pairs(ent.connections) do
-			constraint.Rope( ent, v, 0, 0, ent:GetNWVector("energyPos",Vector(0,0,0)), v:GetNWVector("energyPos",Vector(0,0,0)), ent:LocalToWorld( ent:GetNWVector("energyPos",Vector(0,0,0)) ):Distance(v:LocalToWorld( v:GetNWVector("energyPos",Vector(0,0,0)) )), 100, 1, 3, "cable/cable2", false )
-			local addcon = {ent}
-			table.Add(v.connections, addcon)
-		end		
-	end)	
-end
-
 local function spawn( ply )
-	ply.hover = 0
-	ply.menu = 0
-	ply.selectTimer = 0
-	ply.spawnTimer = 0
-	ply.frame = nil
-	ply.credits = 2000
+	ply.mw_hover = 0
+	ply.mw_menu = 0
+	ply.mw_selectTimer = 0
+	ply.mw_spawntimer = 0
+	ply.mw_frame = nil
+	ply.mw_credits = 2000
 	for k, v in pairs( player.GetAll() ) do
 		net.Start("UpdateClientTeams")
 			net.WriteTable(teamgrid)
@@ -169,7 +94,7 @@ local function takedmg( target, dmginfo )
 		if (target.Base == "ent_melon_prop_base") then
 			target:SetNWFloat( "health", target:GetNWFloat( "health", 1)-dmginfo:GetDamage())
 			if (target:GetNWFloat( "health", 1) <= 0) then
-				target:PropDefaultDeathEffect( target )
+				target:MW_PropDefaultDeathEffect( target )
 			end
 		elseif (target:GetNWInt("propHP", -1) ~= -1) then
 			target:SetNWInt( "propHP", target:GetNWInt( "propHP", 1)-dmginfo:GetDamage())
@@ -184,34 +109,54 @@ local function takedmg( target, dmginfo )
 end
 hook.Add( "EntityTakeDamage", "entitytakedmg", takedmg )
 
+net.Receive( "MW_Activate", function( len, pl )
+	local ent = net.ReadEntity()
+	ent:Actuate();
+end)
+
 net.Receive( "ActivateGate", function( len, pl )
 	local ent = net.ReadEntity()
 	ent:Actuate();
 end)
 
-net.Receive( "UpdateClientInfo", function( len, pl )
+net.Receive( "MW_UpdateClientInfo", function( len, pl )
 	local a = net.ReadInt(8)
 	if (a != 0) then
-		net.Start("TeamCredits")
-			net.WriteInt(teamCredits[a] ,16)
+		//WaterResetTest(mw_teamCredits[a])
+		net.Start("MW_TeamCredits")
+			net.WriteInt(mw_teamCredits[a] ,32)
 		net.Send(pl)
-		net.Start("TeamUnits")
-			net.WriteInt(teamUnits[a] ,16)
+		net.Start("MW_TeamUnits")
+			net.WriteInt(mw_teamUnits[a] ,16)
 		net.Send(pl)
 	else
-		net.Start("TeamCredits")
-			net.WriteInt(20000 ,16)
+		net.Start("MW_TeamCredits")
+			net.WriteInt(20000 ,32)
 		net.Send(pl)
-		net.Start("TeamUnits")
+		net.Start("MW_TeamUnits")
 			net.WriteInt(0 ,16)
 		net.Send(pl)
 	end
 end )
 
-net.Receive( "UpdateServerInfo", function( len, pl )
+function WaterResetTest(number)
+	/*print("------------------------------------")
+	if (number == 0) then
+		print("This looks like a water reset. Please send this chunk of console code to Marum!")
+	end
+	print("Sending credits to server. Setting amount to: "..number)
+	debug.Trace()
+	print("------------------------------------")*/
+end
+
+function MW_UpdateServerInfo(team, water)
+
+end
+
+net.Receive( "MW_UpdateServerInfo", function( len, pl )
 	local a = net.ReadInt(8)
-	teamCredits[a] = net.ReadInt(16)
-	--teamUnits[a] = net.ReadInt(16)
+	mw_teamCredits[a] = net.ReadInt(32)
+	--mw_teamUnits[a] = net.ReadInt(16)
 end )
 
 net.Receive( "ToggleBarracks", function( len, pl )
@@ -222,11 +167,6 @@ net.Receive( "ToggleBarracks", function( len, pl )
 	else
 		ent:SetNWBool("active", true)
 	end
-end )
-
-net.Receive( "DestroyUnitTransport", function( len, pl )
-	local ent = net.ReadEntity()
-	ent:FreeUnits()
 end )
 
 net.Receive( "PropellerReady", function( len, pl )
@@ -243,12 +183,11 @@ end )
 net.Receive( "UseWaterTank", function( len, pl )
 	local ent = net.ReadEntity()
 	local _team = ent:GetNWInt("capTeam", -1)
-	teamCredits[_team] = teamCredits[_team]+1000
+	mw_teamCredits[_team] = mw_teamCredits[_team]+1000
 	for k, v in pairs( player.GetAll() ) do
 		if (v:GetInfo("mw_team") == tostring(_team)) then
-			print("!!")
-			net.Start("TeamCredits")
-				net.WriteInt(teamCredits[_team] ,16)
+			net.Start("MW_TeamCredits")
+				net.WriteInt(mw_teamCredits[_team] ,32)
 			net.Send(v)
 			v:PrintMessage( HUD_PRINTTALK, "///// Received 1000 water" )
 		end
@@ -266,7 +205,7 @@ net.Receive( "UseWaterTank", function( len, pl )
 	ent:Remove()
 end )
 
-net.Receive( "SpawnUnit", function( len, pl )
+net.Receive( "MW_SpawnUnit", function( len, pl )
 	local class = net.ReadString()
 	local unit_index = net.ReadInt(16)
 	local trace = net.ReadTable()
@@ -275,14 +214,15 @@ net.Receive( "SpawnUnit", function( len, pl )
 	local _team = net.ReadInt(8)
 	local attach = net.ReadBool()
 	local angle = net.ReadAngle()
+	local position = net.ReadVector()
 	--print("Class: "..class.." - Trace Hitpos: "..tostring(trace.HitPos).." - Cost: "..cost.." - Team: ".._team)
 	if ( IsValid( trace.Entity ) and trace.Entity.Base == "ent_melon_base") then return end
-	if (trace.Entity:GetClass() == "ent_melon_wall" and (attach == false and units[unit_index].welded_cost ~= -1 and unit_index < 9 --[[<< first building]])) then
+	if (trace.Entity:GetClass() == "ent_melon_wall" and (attach == false and mw_units[unit_index].welded_cost ~= -1 and unit_index < 9 --[[<< first building]])) then
 		pl:PrintMessage( HUD_PRINTCENTER, "Cant spawn mobile units directly on buildings" )
 		return
 	end
-	--newMarine.population = unit_population[melonTeam]
-	local newMarine = SpawnUnitAtPos(class, unit_index, trace.HitPos + trace.HitNormal * 5, angle, cost, spawntime, _team, attach, trace.Entity)
+	--newMarine.population = unit_population[mw_melonTeam]
+	local newMarine = SpawnUnitAtPos(class, unit_index, position/*trace.HitPos + trace.HitNormal * 5*/, angle, cost, spawntime, _team, attach, trace.Entity)
 
 	undo.Create("Melon Marine")
 	 undo.AddEntity( newMarine )
@@ -303,9 +243,9 @@ function SpawnUnitAtPos (class, unit_index, pos, ang, cost, spawntime, _team, at
 	if (IsValid(pl)) then
 		sound.Play( "garrysmod/content_downloaded.wav", pl:GetPos(), 60, 90, 1 )
 	end
-	melonTeam = _team
+	mw_melonTeam = _team
 
-	newMarine.spawnTime = spawntime
+	newMarine.mw_spawntime = spawntime
 	newMarine:Spawn()
 	newMarine:SetNWFloat("spawnTime", spawntime)
 
@@ -326,7 +266,7 @@ function SpawnUnitAtPos (class, unit_index, pos, ang, cost, spawntime, _team, at
 	newMarine:Ini(_team)
 
 	if (IsValid(pl)) then
-		pl.melonTeam = _team
+		pl.mw_melonTeam = _team
 		newMarine:SetOwner(pl)
 	end
 
@@ -343,7 +283,6 @@ end
 net.Receive( "ContraptionSave", function( len, pl )
 	local name = net.ReadString()
 	local entity = net.ReadEntity()
-
 	--file.CreateDir( "melonwars/contraptions" )
 	if (!entity:IsWorld()) then
 		local entities = constraint.GetAllConstrainedEntities( entity )
@@ -357,91 +296,163 @@ net.Receive( "ContraptionSave", function( len, pl )
 		duplicator.SetLocalPos( pl:GetEyeTrace().HitPos )
 		local duptable = duplicator.Copy(entity)
 		local dubJSON = util.TableToJSON(duptable)
+
 		duplicator.SetLocalPos( Vector(0,0,0) )
-		net.Start("ContraptionSaveClient")
+		/*net.Start("ContraptionSaveClient")
 			net.WriteString(dubJSON)
 			net.WriteString(name)
+		net.Send(pl)*/
+
+		local text = dubJSON
+		local compressed_text = util.Compress( text )
+		if ( !compressed_text ) then compressed_text = text end
+		print(string.len(compressed_text))
+		print(util.Decompress(compressed_text:sub(1,336)))
+		local len = string.len( compressed_text )
+		local send_size = 60000
+		local parts = math.ceil( len / send_size )
+		local start = 0
+		print("Beginning contraption load, sending player")
+		net.Start( "BeginContraptionSaveClient" )
+			net.WriteString(name)
+			net.WriteEntity(pl)
 		net.Send(pl)
+		print("text length: "..string.len(text))
+		print("compressed length: "..len)
+		print("parts:"..parts)
+		for i = 1, parts do
+			local endbyte = math.min( start + send_size, len )
+			local size = endbyte - start
+			local data = compressed_text:sub( start + 1, endbyte + 1 )
+			print(util.Decompress(data) or "nil")
+			print("Sending chunk: "..start.." to "..endbyte)
+			net.Start( "ContraptionSaveClient" )
+				net.WriteBool( i == parts )
+				net.WriteUInt( size, 16 )
+				net.WriteData( data, size )
+			net.Send(pl)
+			start = endbyte
+		end
 	end
 end )
+
+mrtsMessageReceivingEntity = nil
+mrtsMessageReceivingState = "idle"
+mrtsNetworkBuffer = ""
+
+net.Receive("BeginContraptionLoad", function()
+	if (mrtsMessageReceivingState == "idle") then
+		local pl = net.ReadEntity()
+		mrtsMessageReceivingEntity = pl
+		mrtsMessageReceivingState = tostring(pl)
+		mrtsNetworkBuffer = ""
+		print("Received Contraption from: "..tostring(pl))
+	else
+		print("Discarding message")
+	end
+end)
 
 net.Receive( "ContraptionLoad", function( len, pl )
 
 	undo.Create("Melon Marine")
 
-	local fileJSON = net.ReadString()
-	local duptable = util.JSONToTable( fileJSON )
-	local ent = net.ReadEntity()
-	local pos
-	if (ent:GetClass() == "player") then
-		pos = ent:GetEyeTrace().HitPos
-	else
-		pos = ent:GetPos()
-	end
-	duplicator.SetLocalPos( pos - Vector((duptable.Maxs.x+duptable.Mins.x)/2, (duptable.Maxs.y+duptable.Mins.y)/2, duptable.Mins.z-10))
-	local paste = duplicator.Paste( pl, duptable.Entities, duptable.Constraints )
-	duplicator.SetLocalPos( Vector(0,0,0) )
-	local melonTeam = pl:GetInfoNum("mw_team", 0)
-	local massHealthMultiplier = 1
-	local massCostMultiplier = 10
-	for k, v in pairs(paste) do
-		if (v.Base == "ent_melon_base") then
-			v:Ini(melonTeam)
-		end
-		if (v:GetClass() == "ent_melon_propeller" or v:GetClass() == "ent_melon_hover") then
-			v:SetNWBool("done",true)
-		end
-		if (!string.StartWith( v:GetClass(), "ent_melon")) then
-			v:SetColor(team_colors[melonTeam])
-			v:SetNWInt("melonTeam", melonTeam)
-			v:SetNWInt("propHP", math.min(1000,v:GetPhysicsObject():GetMass()*massHealthMultiplier))--max 1000 de vida
-			v.realvalue = v:GetPhysicsObject():GetMass()*massCostMultiplier
-		end
-		if (ent:GetClass() == "player") then
-			v:SetVar('targetPos', pos)
-			v:SetNWVector('targetPos', pos)
-		else
-			v:SetVar('targetPos', ent.targetPos+Vector(0,0,1))
-			v:SetNWVector('targetPos', ent.targetPos+Vector(0,0,1))
-			v:SetVar('moving', true)
-		end
-		undo.AddEntity( v )
-	end
+	local last = net.ReadBool()
+	local size = net.ReadUInt(16)
+	local data = net.ReadData(size)
 
-	 undo.SetPlayer( pl)
-	undo.Finish()
+	//local text = util.Decompress(data)
+	mrtsNetworkBuffer = mrtsNetworkBuffer..data
+	print("Receiving chunk. Length so far: "..string.len(mrtsNetworkBuffer))
+	if (last) then
+		local text = util.Decompress(mrtsNetworkBuffer)
+		local duptable = util.JSONToTable( text )
+		local ent = mrtsMessageReceivingEntity
+		local pos
+		if (ent:GetClass() == "player") then
+			pos = ent:GetEyeTrace().HitPos
+		else
+			pos = ent:GetPos()
+		end
+		duplicator.SetLocalPos( pos - Vector((duptable.Maxs.x+duptable.Mins.x)/2, (duptable.Maxs.y+duptable.Mins.y)/2, duptable.Mins.z-10))
+		local paste = duplicator.Paste( player.GetByID( 0 ), duptable.Entities, duptable.Constraints )
+		duplicator.SetLocalPos( Vector(0,0,0) )
+		local mw_melonTeam = pl:GetInfoNum("mw_team", 0)
+		local massHealthMultiplier = 1
+		local massCostMultiplier = 10
+		for k, v in pairs(paste) do
+			if (v.Base == "ent_melon_base") then
+				v:Ini(mw_melonTeam)
+			end
+			if (v:GetClass() == "ent_melon_propeller" or v:GetClass() == "ent_melon_hover") then
+				v:SetNWBool("done",true)
+			end
+			if (!string.StartWith( v:GetClass(), "ent_melon")) then
+				v:SetColor(mw_team_colors[mw_melonTeam])
+				v:SetMaterial("")
+				v:SetNWInt("mw_melonTeam", mw_melonTeam)
+				v:SetNWInt("propHP", math.min(1000,v:GetPhysicsObject():GetMass()*massHealthMultiplier))--max 1000 de vida
+				v.realvalue = v:GetPhysicsObject():GetMass()*massCostMultiplier
+				hook.Run("MelonWarsEntitySpawned", v)
+			end
+			if (ent:GetClass() == "player") then
+				v:SetVar('targetPos', pos)
+				v:SetNWVector('targetPos', pos)
+			else
+				v:SetVar('targetPos', ent.targetPos+Vector(0,0,1))
+				v:SetNWVector('targetPos', ent.targetPos+Vector(0,0,1))
+				v:SetVar('moving', true)
+			end
+			undo.AddEntity( v )
+		end
+
+		 undo.SetPlayer( pl)
+		undo.Finish()
+
+		for k, v in pairs(paste) do
+			v:GetPhysicsObject():EnableMotion(true)
+		end
+
+		mrtsMessageReceivingEntity = nil
+		mrtsMessageReceivingState = "idle"
+		mrtsNetworkBuffer = ""
+	end
 end )
 
 net.Receive( "RequestContraptionLoadToAssembler", function( len, pl )
 	local ent = net.ReadEntity()
+	local powerCost = net.ReadUInt(16)
 	local _file = net.ReadString()
+	local time = net.ReadFloat()
 	ent.file = _file
 	ent.player = pl
-	print("RequestContraptionLoad")
+	ent.powerCost = powerCost
 	ent:SetNWBool("active", true)
-	ent:SetNWFloat("nextSlowThink", CurTime()+net.ReadFloat())
-	
+	ent:SetNWFloat("nextSlowThink", CurTime()+time)
+	ent:SetNWFloat("slowThinkTimer", time)
 	--net.Start("ContraptionLoad")
 	--	net.WriteString(_file)
 	--	net.WriteVector(ent:GetPos())
 	--net.SendToServer()
 end )
 
-net.Receive( "SpawnProp", function( len, pl )
+net.Receive( "MW_SpawnProp", function( len, pl )
 	local index = net.ReadInt(16)
 	local trace = net.ReadTable()
 	local cost = net.ReadInt(16)
 	local _team = net.ReadInt(8)
 	local propAngle = pl.propAngle
 
-	local offset = base_offset[index]
+	local offset = Vector(0,0,mw_base_props[index].offset.z)
+	if (cvars.Bool("mw_prop_offset") == true) then
+		offset = mw_base_props[index].offset
+	end
 	local xoffset = Vector(offset.x*(math.cos(propAngle.y/180*math.pi)), offset.x*(math.sin(propAngle.y/180*math.pi)),0)
 	local yoffset = Vector(offset.y*(-math.sin(propAngle.y/180*math.pi)), offset.y*(math.cos(propAngle.y/180*math.pi)),0)
 	offset = xoffset+yoffset+Vector(0,0,offset.z)
-	SpawnProp(base_models[index], trace.HitPos + trace.HitNormal + offset, propAngle + base_angle[index], _team, trace.Entity, cost, pl)
+	MW_SpawnProp(mw_base_props[index].model, trace.HitPos + trace.HitNormal + offset, propAngle + mw_base_props[index].angle, _team, trace.Entity, cost, pl)
 end )
 
-function SpawnProp(model, pos, ang, _team, parent, cost, pl)
+function MW_SpawnProp(model, pos, ang, _team, parent, cost, pl)
 	local newMarine = ents.Create( "ent_melon_wall" )
 	if ( !IsValid( newMarine ) ) then return end -- Check whether we successfully made an entity, if not - bail
 	--if ( IsValid( trace.Entity ) and trace.Entity.Base == "ent_melon_base" ) then return end
@@ -452,7 +463,7 @@ function SpawnProp(model, pos, ang, _team, parent, cost, pl)
 	
 	sound.Play( "garrysmod/content_downloaded.wav", pos, 60, 90, 1 )
 
-	newMarine:SetNWInt("melonTeam", _team)
+	newMarine:SetNWInt("mw_melonTeam", _team)
 
 	newMarine:Spawn()
 
@@ -467,7 +478,7 @@ function SpawnProp(model, pos, ang, _team, parent, cost, pl)
 
 	if (IsValid(pl)) then
 		sound.Play( "garrysmod/content_downloaded.wav", pl:GetPos(), 60, 90, 1 )
-		pl.melonTeam = _team
+		pl.mw_melonTeam = _team
 		newMarine:SetOwner(pl)
 		undo.Create("Melon Marine")
 		 undo.AddEntity( newMarine )
@@ -493,22 +504,58 @@ net.Receive( "SpawnBase", function( len, pl )
 	local trace = net.ReadTable()
 	local _team = net.ReadInt(8)
 	if ( IsValid( trace.Entity ) and trace.Entity.Base == "ent_melon_base" ) then return end
-	SpawnBaseAtPos(_team, trace.HitPos, pl)
+	MW_SpawnBaseAtPos(_team, trace.HitPos, pl, false)
 end )
 
-function SpawnBaseAtPos(_team, vector, pl)
-	local newMarine = ents.Create( "ent_melon_main_building" )
+net.Receive( "SpawnBaseGrandWar", function( len, pl )
+	local trace = net.ReadTable()
+	local _team = net.ReadInt(8)
+	if ( IsValid( trace.Entity ) and trace.Entity.Base == "ent_melon_base" ) then return end
+	MW_SpawnBaseAtPos(_team, trace.HitPos, pl, true)
+end )
+
+net.Receive( "SpawnCapturePoint", function( len, pl )
+	local trace = net.ReadTable()
+	if ( IsValid( trace.Entity ) and trace.Entity.Base == "ent_melon_base" ) then return end
+	local e = ents.Create("ent_melon_cap_point")
+	e:SetPos(trace.HitPos)
+	e:Spawn()
+end )
+
+net.Receive( "SpawnOutpost", function( len, pl )
+	local trace = net.ReadTable()
+	if ( IsValid( trace.Entity ) and trace.Entity.Base == "ent_melon_base" ) then return end
+	local e = ents.Create("ent_melon_outpost_point")
+	e:SetPos(trace.HitPos)
+	e:Spawn()
+end )
+
+net.Receive( "SpawnWaterTank", function( len, pl )
+	local trace = net.ReadTable()
+	if ( IsValid( trace.Entity ) and trace.Entity.Base == "ent_melon_base" ) then return end
+	local e = ents.Create("ent_melon_water_tank")
+	e:SetPos(trace.HitPos)
+	e:Spawn()
+end )
+
+function MW_SpawnBaseAtPos(_team, vector, pl, grandwar)
+
+	local class = "ent_melon_main_building"
+	if (grandwar) then
+		class = "ent_melon_main_building_grand_war"
+	end
+	local newMarine = ents.Create( class )
 	if ( !IsValid( newMarine ) ) then return end -- Check whether we successfully made an entity, if not - bail
 	newMarine:SetPos( vector)
 	
 	sound.Play( "garrysmod/content_downloaded.wav", vector, 60, 90, 1 )
 
-	melonTeam = _team
+	mw_melonTeam = _team
 
-	newMarine.spawnTime = 0
+	newMarine.mw_spawntime = 0
 
 	newMarine:Spawn()
-	newMarine:SetNWInt("melonTeam", _team)
+	newMarine:SetNWInt("mw_melonTeam", _team)
 
 	newMarine:Ini(_team)
 
@@ -527,14 +574,14 @@ net.Receive( "SellEntity", function( len, pl )
 	if (entity.Base == "ent_melon_base") then
 		if (entity.canMove == true) then
 			if (entity.gotHit or CurTime()-entity:GetCreationTime() >= 30 or entity.fired ~= false) then
-				pl:PrintMessage( HUD_PRINTTALK, "///// Can't sell mobile units after 30 seconds, after they got hit, or after they fired." )
+				pl:PrintMessage( HUD_PRINTTALK, "///// Can't sell mobile mw_units after 30 seconds, after they got hit, or after they fired." )
 				sound.Play( "buttons/button2.wav", pl:GetPos(), 75, 100, 1 )
 				entity = nil
 			end
 		end
 	end
 	if (entity ~= nil) then
-		if (entity:GetClass() == "ent_melon_main_building" or (entity.Base ~= "ent_melon_base" and entity.Base ~= "ent_melon_prop_base" and entity:GetClass() ~= "prop_physics") or (entity:GetClass() == "prop_physics" and entity:GetNWInt("melonTeam", -1) ~= playerTeam)) then
+		if (entity:GetClass() == "ent_melon_main_building" or (entity.Base ~= "ent_melon_base" and entity.Base ~= "ent_melon_prop_base" and entity.Base ~= "ent_melon_energy_base" and entity:GetClass() ~= "prop_physics") or (entity:GetClass() == "prop_physics" and entity:GetNWInt("mw_melonTeam", -1) ~= playerTeam)) then
 			pl:PrintMessage( HUD_PRINTTALK, "///// That's not a sellable entity" )
 			sound.Play( "buttons/button2.wav", pl:GetPos(), 75, 100, 1 )
 			entity = nil
@@ -542,11 +589,11 @@ net.Receive( "SellEntity", function( len, pl )
 	end
 	if (entity ~= nil) then
 		if (entity:GetClass() == "prop_physics" or entity.gotHit or CurTime()-entity:GetCreationTime() >= 30 or (entity.Base == "ent_melon_base" and entity.fired ~= false)) then --pregunta si NO se va a recivir el dinero de refund
-			teamCredits[playerTeam] = teamCredits[playerTeam]+entity.value*0.25
+			mw_teamCredits[playerTeam] = mw_teamCredits[playerTeam]+entity.value*0.25
 			for k, v in pairs( player.GetAll() ) do
-				if (v:GetInfo("mw_team") == tostring(entity:GetNWInt("melonTeam", 0))) then
-					net.Start("TeamCredits")
-						net.WriteInt(teamCredits[entity:GetNWInt("melonTeam", 0)] ,16)
+				if (v:GetInfo("mw_team") == tostring(entity:GetNWInt("mw_melonTeam", 0))) then
+					net.Start("MW_TeamCredits")
+						net.WriteInt(mw_teamCredits[entity:GetNWInt("mw_melonTeam", 0)] ,32)
 					net.Send(v)
 					v:PrintMessage( HUD_PRINTTALK, "///// "..tostring(entity.value*0.25).." Water Recovered" )
 				end
@@ -564,11 +611,9 @@ net.Receive( "SellEntity", function( len, pl )
 end )
 util.AddNetworkString( "SellEntity" )
 
-
-
 net.Receive( "LegalizeContraption", function( len, pl )
 	local traceEntity = pl:GetEyeTrace().Entity
-	local melonTeam = net.ReadInt(8)
+	local mw_melonTeam = net.ReadInt(8)
 	
 	local mass = 0 --precio por masa
 	local cons = 0 --precio por construction tools
@@ -579,7 +624,7 @@ net.Receive( "LegalizeContraption", function( len, pl )
 			if (!freeze) then
 				local c = ent:GetClass()
 				if (c == "prop_physics") then
-					if (ent:GetNWInt("melonTeam", -1) == -1) then
+					if (ent:GetNWInt("mw_melonTeam", -1) == -1) then
 						local phys = ent:GetPhysicsObject()
 						if (IsValid(phys)) then
 							mass = mass+math.min(1000,phys:GetMass()) --max 1000 de vida
@@ -591,15 +636,15 @@ net.Receive( "LegalizeContraption", function( len, pl )
 	end
 	local massCostMultiplier = 10
 	local massHealthMultiplier = 1
-	if (teamCredits[melonTeam] >= mass*massCostMultiplier or not cvars.Bool("mw_admin_credit_cost")) then
+	if (mw_teamCredits[mw_melonTeam] >= mass*massCostMultiplier or not cvars.Bool("mw_admin_credit_cost")) then
 		if (IsValid(traceEntity)) then
 			for _, ent in pairs( entities ) do
 				if (string.StartWith( ent:GetClass(), "gmod_" ) or string.StartWith( ent:GetClass(), "prop_vehicle")) then
 					ent:Remove()
 				else
 					if (!string.StartWith( ent:GetClass(), "ent_melon")) then
-						ent:SetColor(team_colors[melonTeam])
-						ent:SetNWInt("melonTeam", melonTeam)
+						ent:SetColor(mw_team_colors[mw_melonTeam])
+						ent:SetNWInt("mw_melonTeam", mw_melonTeam)
 						ent:SetNWInt("propHP", math.min(1000,ent:GetPhysicsObject():GetMass()*massHealthMultiplier))--max 1000 de vida
 						--ent:GetPhysicsObject():SetMaterial( "ice" )
 						ent.realvalue = ent:GetPhysicsObject():GetMass()*massCostMultiplier
@@ -607,9 +652,9 @@ net.Receive( "LegalizeContraption", function( len, pl )
 				end
 			end
 			if (cvars.Bool("mw_admin_credit_cost")) then
-				teamCredits[melonTeam] = teamCredits[melonTeam]-mass*massCostMultiplier
-				net.Start("TeamCredits")
-					net.WriteInt(teamCredits[melonTeam] ,16)
+				mw_teamCredits[mw_melonTeam] = mw_teamCredits[mw_melonTeam]-mass*massCostMultiplier
+				net.Start("MW_TeamCredits")
+					net.WriteInt(mw_teamCredits[mw_melonTeam] ,32)
 				net.Send(pl)
 			end
 		end
@@ -619,10 +664,11 @@ util.AddNetworkString( "LegalizeContraption" )
 
 concommand.Add( "mw_reset_credits", function( ply )
 	if (ply:IsAdmin()) then
-		teamCredits = {2000,2000,2000,2000,2000,2000,2000,2000}
+		local c = cvars.Number("mw_admin_starting_credits")
+		mw_teamCredits = {c,c,c,c,c,c,c,c}
 		for k, v in pairs( player.GetAll() ) do
-			net.Start("TeamCredits")
-				net.WriteInt(2000 ,16)
+			net.Start("MW_TeamCredits")
+				net.WriteInt(c ,32)
 			net.Send(v)
 		end
 	end
@@ -660,20 +706,20 @@ end)
 
 concommand.Add( "mw_reset_power", function( ply )
 	if (ply:IsAdmin()) then
-		teamUnits = {0,0,0,0,0,0,0,0}
+		mw_teamUnits = {0,0,0,0,0,0,0,0}
 		--local allMelons = ents.GetAll()
 		--for k, v in pairs(allMelons) do
 	--	
 	--		if (v.Base == "ent_melon_base") then
-	--			prnt(v:GetVar("melonTeam"))
-	--			--teamUnits[v:GetVar("melonTeam")] = teamUnits[v:GetVar("melonTeam")]
+	--			prnt(v:GetVar("mw_melonTeam"))
+	--			--mw_teamUnits[v:GetVar("mw_melonTeam")] = mw_teamUnits[v:GetVar("mw_melonTeam")]
 	--		end
 	--	end
 		
 		for k, v in pairs( player.GetAll() ) do
-			local melonTeam = v:GetInfoNum("mw_team", 0)
-			net.Start("TeamUnits")
-				net.WriteInt(teamUnits[melonTeam] ,16)
+			local mw_melonTeam = v:GetInfoNum("mw_team", 0)
+			net.Start("MW_TeamUnits")
+				net.WriteInt(mw_teamUnits[mw_melonTeam] ,32)
 			net.Send(v)
 		end
 
@@ -687,7 +733,7 @@ concommand.Add( "mw_reset_power", function( ply )
 end)
 
 concommand.Add( "+mw_select", function( ply )
-	ply.selecting = true
+	ply.mw_selecting = true
 	local trace = util.TraceLine( {
 		start = ply:EyePos(),
 		endpos = ply:EyePos() + ply:EyeAngles():Forward() * 10000,
@@ -695,9 +741,9 @@ concommand.Add( "+mw_select", function( ply )
 		mask = MASK_WATER+MASK_SOLID
 	} )
 	--print(trace.Entity)
-	ply.selStart = trace.HitPos
-	ply:SetNWVector("selStart", ply.selStart)
-	ply:SetNWBool("selecting", ply.selecting)
+	ply.mw_selStart = trace.HitPos
+	ply:SetNWVector("mw_selStart", ply.mw_selStart)
+	ply:SetNWBool("mw_selecting", ply.mw_selecting)
 	sound.Play( "buttons/lightswitch2.wav", ply:GetPos(), 75, 100, 1 )
 end)
 
@@ -720,31 +766,53 @@ end)
 
 util.AddNetworkString( "Selection" )
 concommand.Add( "-mw_select", function( ply )
-	ply.selecting = false
-	ply:SetNWBool("selecting", ply.selecting)
+	ply.mw_selecting = false
+	ply:SetNWBool("mw_selecting", ply.mw_selecting)
 
 	--Encuentra todas las entidades en la esfera de selección
 
-	local foundEnts = ents.FindInSphere((ply.selEnd+ply.selStart)/2, ply.selStart:Distance(ply.selEnd)/2+0.1 )
+	local foundEnts = ents.FindInSphere((ply.mw_selEnd+ply.mw_selStart)/2, ply.mw_selStart:Distance(ply.mw_selEnd)/2+0.1 )
 	local selectEnts = table.Copy( foundEnts )
 	if (!ply:KeyDown(IN_SPEED)) then ply.foundMelons = {} end
 	--Busca de esas entidades cuales son sandias, y cuales son del equipo correcto
 
+	--print("////////")
+	--print("Building foundEnts")
 	for k, v in pairs( selectEnts ) do
 		if (v.moveType != MOVETYPE_NONE) then
-			table.Add(foundEnts, constraint.GetAllConstrainedEntities( v ))
-		end
-	end
-
-	for k, v in pairs( foundEnts ) do
-		if (v.Base != "ent_melon_base_prop") then
-			if (cvars.Bool("mw_admin_move_any_team", false) or v:GetNWInt("melonTeam", 0) == ply:GetInfoNum( "mw_team", 0 )) then
-				if (v:GetNWInt("melonTeam", 0) != 0) then
-					table.insert(ply.foundMelons, v)
+			local tbl = constraint.GetAllConstrainedEntities( v )
+			if (istable(tbl)) then
+				for kk, vv in pairs (tbl) do
+					if (!table.HasValue(selectEnts, vv)) then
+						table.insert(foundEnts, vv)
+						--print("Added "..tostring(vv))
+					else
+						--print("Discarded "..tostring(vv))
+					end
 				end
 			end
 		end
 	end
+	--PrintTable(foundEnts)
+
+	--print("Building foundMelons")
+	for k, v in pairs( foundEnts ) do
+		if (v.Base == "ent_melon_base") then
+			if (cvars.Bool("mw_admin_move_any_team", false) or v:GetNWInt("mw_melonTeam", -1) == ply:GetInfoNum( "mw_team", -1 )) then
+				--if (v:GetNWInt("mw_melonTeam", 0) != 0) then
+					table.insert(ply.foundMelons, v)
+					--print("Added "..tostring(v).." succesfully")
+				--else
+				--	print("Didn't add "..tostring(v).." because it had no team")
+				--end
+			--else
+			--	print("Didn't add "..tostring(v).." because it wasn't my team")
+			end
+		--else
+		--	print("Didn't add "..tostring(v).." because it was a base prop")
+		end
+	end
+	--PrintTable(ply.foundMelons)
 	--Le envia al client la lista de sandias para que pueda dibujar los halos
 	net.Start("Selection")
 		net.WriteInt(table.Count(ply.foundMelons),16)
@@ -753,16 +821,16 @@ concommand.Add( "-mw_select", function( ply )
 		end
 	net.Send(ply)
 	sound.Play( "buttons/lightswitch2.wav", ply:GetPos(), 75, 90, 1 )
-	ply.selEnd = Vector(0,0,0)
-	ply.selStart = Vector(0,0,0)
-	ply:SetNWVector("selStart", Vector(0,0,0))
-	ply:SetNWBool("selecting",  Vector(0,0,0))
+	ply.mw_selEnd = Vector(0,0,0)
+	ply.mw_selStart = Vector(0,0,0)
+	ply:SetNWVector("mw_selStart", Vector(0,0,0))
+	ply:SetNWBool("mw_selecting",  Vector(0,0,0))
 end)
 
 concommand.Add( "mw_typeselect", function( ply, cmd, args )
 	if (args[1]) then
-		ply.selecting = false
-		ply:SetNWBool("selecting", false)
+		ply.mw_selecting = false
+		ply:SetNWBool("mw_selecting", false)
 
 		--Encuentra todas las entidades en la esfera de selección
 		print("Attempting type select with class "..args[1])
@@ -773,7 +841,7 @@ concommand.Add( "mw_typeselect", function( ply, cmd, args )
 		for k, v in pairs( foundEnts ) do
 			if (v.Base == "ent_melon_base") then
 				if (v:GetClass() == args[1]) then
-					if (cvars.Bool("mw_admin_move_any_team", false) or v:GetNWInt("melonTeam", 0) == ply:GetInfoNum( "mw_team", 0 )) then
+					if (cvars.Bool("mw_admin_move_any_team", false) or v:GetNWInt("mw_melonTeam", 0) == ply:GetInfoNum( "mw_team", 0 )) then
 						if (v:GetVar("canBeSelected") == true) then
 							table.insert(ply.foundMelons, v)
 						end
@@ -789,10 +857,10 @@ concommand.Add( "mw_typeselect", function( ply, cmd, args )
 			end
 		net.Send(ply)
 		sound.Play( "buttons/lightswitch2.wav", ply:GetPos(), 75, 90, 1 )
-		ply.selEnd = Vector(0,0,0)
-		ply.selStart = Vector(0,0,0)
-		ply:SetNWVector("selStart", Vector(0,0,0))
-		ply:SetNWBool("selecting",  Vector(0,0,0))
+		ply.mw_selEnd = Vector(0,0,0)
+		ply.mw_selStart = Vector(0,0,0)
+		ply:SetNWVector("mw_selStart", Vector(0,0,0))
+		ply:SetNWBool("mw_selecting",  Vector(0,0,0))
 	end
 end)
 
@@ -835,6 +903,113 @@ concommand.Add( "mw_order", function( ply )
 		mask = MASK_WATER+MASK_SOLID
 	} )
 	
+	if (ply.foundMelons ~= nil) then
+		for k, v in pairs( ply.foundMelons ) do
+			if (!IsValid(v) or not string.StartWith(v:GetClass(), "ent_melon_")) then
+				--Si murió, lo saco de la tabla
+				table.remove(ply.foundMelons, k)
+			end
+		end
+
+		if (ply:KeyDown(IN_SPEED)) then
+			for k, v in pairs( ply.foundMelons ) do
+				local i = 30
+				while i >= 0 do
+					if (i == 0) then
+						v.rallyPoints[1] = trace.HitPos
+						v.moving = true
+						movedMelons = true
+						i = -1
+					elseif (v.rallyPoints[i] ~= Vector(0,0,0)) then
+						if (i < 30) then
+							if (v.rallyPoints[i+1] == Vector(0,0,0)) then
+								v.rallyPoints[i+1] = trace.HitPos
+								movedMelons = true
+								i = -1
+							end
+						end
+					end
+					i = i-1
+				end
+			end
+		elseif (ply:KeyDown(IN_WALK)) then
+			for k, v in pairs( ply.foundMelons ) do
+				if (IsValid(v) and string.StartWith(v:GetClass(), "ent_melon_")) then
+					--si tenia apretado alt, dispara
+					if (tostring(trace.Entity) == "Entity [0][worldspawn]") then
+						--si se le apuntó al mundo, sacar objetivo
+						v:SetVar("forcedTargetEntity", v)
+						v:SetVar("targetEntity", v)
+						v:SetVar("followEntity", v)
+						v:SetNWEntity("followEntity", v)
+						v:SetNWEntity("targetEntity", v)
+						v:SetVar("chasing", false)
+					else
+						if (v:GetNWInt("mw_melonTeam", 0) == trace.Entity:GetNWInt("mw_melonTeam", 0)) then
+							--si se le apuntó a algo, darle eso como objetivo
+							v:SetVar("followEntity", trace.Entity)
+							v:SetNWEntity("followEntity", trace.Entity)
+							v:SetVar("forcedTargetEntity", v)
+							v:SetVar("targetEntity", v)
+							v:SetNWEntity("targetEntity", v)
+							v:SetVar("chasing", false)
+						else
+							v:SetVar("followEntity", v)
+							v:SetNWEntity("followEntity", v)
+							v:SetVar("forcedTargetEntity", trace.Entity)
+							v:SetVar("targetEntity", trace.Entity)
+							v:SetNWEntity("targetEntity", trace.Entity)
+							v:SetVar("chasing", true)
+						end
+					end
+					movedMelons = true
+				end
+			end
+		elseif (ply:KeyDown(IN_DUCK)) then
+			local center = Vector(0,0,0)
+			local i = 0
+			for k, v in pairs( ply.foundMelons ) do
+				if (IsValid(v) and string.StartWith(v:GetClass(), "ent_melon_")) then
+					center = center+v:GetPos()
+					i = i+1
+				end
+			end
+			center = center/i
+			local distance = 50
+			for k, v in pairs( ply.foundMelons ) do
+				if (IsValid(v) and string.StartWith(v:GetClass(), "ent_melon_")) then
+					--local clampedMagnitude = math.max(100,math.min(500,(v:GetPos()-center):Length()))
+					distance = distance + 25/(1+distance*0.1)
+					local newTarget = v:GetPos()+(v:GetPos()-center):GetNormalized()*distance
+					v:RemoveRallyPoints()
+					v:SetVar("targetPos", newTarget)
+					v:SetNWVector("targetPos", newTarget)
+					v:SetVar("moving", true)
+					v:SetVar("chasing", false)
+					v:SetVar("followEntity", v)
+					v:SetNWEntity("followEntity", v)
+					movedMelons = true
+				end
+			end
+		else
+			for k, v in pairs( ply.foundMelons ) do
+				--si no, mueve
+				if (IsValid(v) and string.StartWith(v:GetClass(), "ent_melon_")) then
+					v:RemoveRallyPoints()
+					v:SetVar("targetPos", trace.HitPos)
+					v:SetNWVector("targetPos", trace.HitPos)
+					v:SetVar("moving", true)
+					v:SetVar("chasing", false)
+					v:SetVar("followEntity", v)
+					v:SetNWEntity("followEntity", v)
+					movedMelons = true
+				end
+			end
+		end
+	end
+
+
+	--[[
 	local movedMelons = false
 	if (ply.foundMelons ~= nil) then
 		for k, v in pairs( ply.foundMelons ) do
@@ -863,7 +1038,6 @@ concommand.Add( "mw_order", function( ply )
 							end
 							i = i-1
 						end
-						PrintTable(v.rallyPoints)
 					elseif (ply:KeyDown(IN_WALK)) then
 						--si tenia apretado alt, dispara
 						if (tostring(trace.Entity) == "Entity [0][worldspawn]") then
@@ -875,7 +1049,7 @@ concommand.Add( "mw_order", function( ply )
 							v:SetNWEntity("targetEntity", v)
 							v:SetVar("chasing", false)
 						else
-							if (v:GetNWInt("melonTeam", 0) == trace.Entity:GetNWInt("melonTeam", 0)) then
+							if (v:GetNWInt("mw_melonTeam", 0) == trace.Entity:GetNWInt("mw_melonTeam", 0)) then
 								--si se le apuntó a algo, darle eso como objetivo
 								v:SetVar("followEntity", trace.Entity)
 								v:SetNWEntity("followEntity", trace.Entity)
@@ -893,6 +1067,8 @@ concommand.Add( "mw_order", function( ply )
 							end
 						end
 						movedMelons = true
+					elseif (if (ply:KeyDown(IN_DUCK)) then)
+
 					else
 						--si no, mueve
 						v:RemoveRallyPoints()
@@ -908,6 +1084,7 @@ concommand.Add( "mw_order", function( ply )
 			end
 		end
 	end
+	]]
 		
 	if (movedMelons) then
 		sound.Play( "garrysmod/ui_click.wav", ply:GetPos(), 75, 100, 1 )
@@ -924,30 +1101,34 @@ concommand.Add( "mw_save", function( ply )
 			local newMarker = ents.Create("ent_melonmarker_base")
 			newMarker:SetPos(v:GetPos())
 			newMarker:Spawn()
-			newMarker:SetMelonTeam(v:GetNWInt("melonTeam", 0))
+			newMarker:SetMelonTeam(v:GetNWInt("mw_melonTeam", 0))
 			v:Remove()
 		elseif (v:GetClass() == "ent_melon_wall") then
 			local newMarker = ents.Create("ent_melonmarker_base_prop")
 			newMarker:SetPos(v:GetPos())
 			newMarker:SetAngles(v:GetAngles())
 			newMarker:Spawn()
-			print("Parent: "..tostring(v.melonParent))
-			newMarker:SetMelonTeam(v:GetNWInt("melonTeam", 0), v:GetModel(), v.melonParent)
+			newMarker:SetMelonTeam(v:GetNWInt("mw_melonTeam", 0), v:GetModel(), v.melonParent)
 			v:Remove()
 		elseif (v.Base == "ent_melon_base") then
 			local newMarker = ents.Create("ent_melonmarker_unit")
 			newMarker:SetPos(v:GetPos())
+			newMarker:SetAngles(v:GetAngles())
 			newMarker:Spawn()
-			newMarker:SetMelonTeam(v:GetNWInt("melonTeam", 0), v:GetClass(), v:GetCollisionGroup() == COLLISION_GROUP_DISSOLVING)
+			newMarker:SetMelonTeam(v:GetNWInt("mw_melonTeam", 0), v:GetClass(), v:GetCollisionGroup() == COLLISION_GROUP_DISSOLVING)
+			v:Remove()
+		elseif (v.Base == "ent_melon_energy_base") then
+			local newMarker = ents.Create("ent_melonmarker_energy_unit")
+			newMarker:SetPos(v:GetPos())
+			newMarker:Spawn()
+			newMarker:SetMelonTeam(v:GetNWInt("mw_melonTeam", 0), v:GetClass(), v:GetCollisionGroup() == COLLISION_GROUP_DISSOLVING)
 			v:Remove()
 		end
 	end
 
 	file.CreateDir( "melonwars" )
-	print("melonwars/melonwars_save_"..GetConVarString( "mw_save_name" )..".txt")
-	file.Write( "melonwars/melonwars_save_"..GetConVarString( "mw_save_name" )..".txt", gmsave.SaveMap( ply ))
-
-	print("Stage saved to 'data/melonwars/melonwars_save_"..GetConVarString( "mw_save_name" )..".txt'. Remember to move it into your Campaign's folder.")
+	file.Write( GetConVarString( "mw_save_name" )..".txt", gmsave.SaveMap( ply ))
+	print("Stage saved to '"..GetConVarString( "mw_save_name" )..".txt'. Remember to move it into your Campaign's folder.")
 end)
 
 concommand.Add( "mw_load", function( ply )
@@ -955,27 +1136,28 @@ concommand.Add( "mw_load", function( ply )
 
 	local tab
 	--"data/melonwars_save_"
-	if (file.Exists(GetConVarString( "mw_save_path" ).."melonwars_save_"..GetConVarString( "mw_save_name" )..".lua", "LUA")) then
-		print("Finding file "..GetConVarString( "mw_save_path" ).."melonwars_save_"..GetConVarString( "mw_save_name" )..".lua")
-		tab = util.JSONToTable( file.Read( GetConVarString( "mw_save_path" ).."melonwars_save_"..GetConVarString( "mw_save_name" )..".lua", "LUA"))
-	elseif (file.Exists(GetConVarString( "mw_save_path" ).."melonwars_save_"..GetConVarString( "mw_save_name" )..".txt", "DATA")) then
+	if (file.Exists(/*GetConVarString( "mw_save_path" ).."melonwars_save_"..*/GetConVarString( "mw_save_name" )..".lua", "LUA")) then
+		//print("Finding file "..GetConVarString( "mw_save_path" ).."melonwars_save_"..GetConVarString( "mw_save_name" )..".lua")
+		tab = util.JSONToTable( file.Read( /*GetConVarString( "mw_save_path" ).."melonwars_save_"..*/GetConVarString( "mw_save_name" )..".lua", "LUA"))
+	elseif (file.Exists(/*GetConVarString( "mw_save_path" ).."melonwars_save_"..*/GetConVarString( "mw_save_name" ), "DATA")) then
 		--"melonwars/<campaign>"
-		print("Finding file "..GetConVarString( "mw_save_path" ).."melonwars_save_"..GetConVarString( "mw_save_name" )..".txt")
-		tab = util.JSONToTable( file.Read( GetConVarString( "mw_save_path" ).."melonwars_save_"..GetConVarString( "mw_save_name" )..".txt", "DATA"))
+		//print(GetConVarString( "mw_save_path" ).."melonwars_save_"..GetConVarString( "mw_save_name" )..".txt")
+		tab = util.JSONToTable( file.Read( /*GetConVarString( "mw_save_path" ).."melonwars_save_"..*/GetConVarString( "mw_save_name" ), "DATA"))
 	else
-		print("File "..GetConVarString( "mw_save_name" ).." not found in addon folder, and file melonwars_save_"..GetConVarString( "mw_save_name" ).." not found in folder "..GetConVarString( "mw_save_path" ))
+		print("File "..GetConVarString( "mw_save_name" ).." not found in addon folder")
 		return false
 	end
 	game.CleanUpMap()
 	DisablePropCreateEffect = true
 	duplicator.RemoveMapCreatedEntities()
 	duplicator.Paste( ply, tab.Entities, tab.Constraints )
-	teamUnits = {0,0,0,0,0,0,0,0}
+	mw_teamUnits = {0,0,0,0,0,0,0,0}
+	mw_electric_network = {}
 	for k, v in pairs( player.GetAll() ) do
-		local melonTeam = v:GetInfoNum("mw_team", 0)
-		if (melonTeam != 0) then
-			net.Start("TeamUnits")
-				net.WriteInt(teamUnits[melonTeam] ,16)
+		local mw_melonTeam = v:GetInfoNum("mw_team", 0)
+		if (mw_melonTeam != 0) then
+			net.Start("MW_TeamUnits")
+				net.WriteInt(mw_teamUnits[mw_melonTeam] ,16)
 			net.Send(v)
 		end
 	end
@@ -985,20 +1167,23 @@ concommand.Add( "mw_load", function( ply )
 
 	local allents = ents.GetAll()
 	for k, v in pairs( allents ) do
-		if (v.Base == "ent_melon_base" or v:GetClass() == "ent_melon_wall") then
+		if (v.Base == "ent_melon_base" or v.Base == "ent_melon_energy_base" or v:GetClass() == "ent_melon_wall") then
 			v:Remove() -- Si quedó alguna entidad melon guardada la borra
 		elseif (v:GetClass() == "ent_melonmarker_base") then
-			SpawnBaseAtPos(v.melonTeam, v:GetPos())
+			MW_SpawnBaseAtPos(v.mw_melonTeam, v:GetPos())
 			v:Remove()
 		elseif (v:GetClass() == "ent_melonmarker_base_prop") then
-			SpawnProp(v.melonModel, v:GetPos(), v:GetAngles(), v.melonTeam, nil, 0)
+			MW_SpawnProp(v.melonModel, v:GetPos(), v:GetAngles(), v.mw_melonTeam, nil, 0)
 			v:Remove()
 		elseif (v:GetClass() == "ent_melonmarker_unit") then
 			if (!v.attach) then
-				SpawnUnitAtPos(v.melonClass, 0, v:GetPos(), 0, 0, v.melonTeam, v.attach)
+				SpawnUnitAtPos(v.melonClass, 0, v:GetPos(), v:GetAngles(), 0, 0, v.mw_melonTeam, v.attach)
 			else
-				SpawnUnitAtPos(v.melonClass, 0, v:GetPos(), 0, 0, v.melonTeam, v.attach, v:GetParent())
+				SpawnUnitAtPos(v.melonClass, 0, v:GetPos(), v:GetAngles(), 0, 0, v.mw_melonTeam, v.attach, v:GetParent())
 			end
+			v:Remove()
+		elseif (v:GetClass() == "ent_melonmarker_energy_unit") then
+			SpawnUnitAtPos(v.melonClass, 0, v:GetPos(), v:GetAngles(), 0, 0, v.mw_melonTeam, v.attach)
 			v:Remove()
 		elseif (v:GetClass() == "ent_melon_cap_point") then
 			v:SetPos(v:GetPos()-Vector(0,0,70))
@@ -1065,18 +1250,17 @@ end)
 hook.Add( "Think", "update", function()	
 	local tbl = player.GetAll()
 	for k, v in pairs( tbl ) do
-		if (v.selecting) then
+		if (v.mw_selecting) then
 			local trace = util.TraceLine( {
 				start = v:EyePos(),
 				endpos = v:EyePos() + v:EyeAngles():Forward() * 10000,
 				filter = function( ent ) if ( ent:GetClass() != "player" ) then return true end end,
 				mask = MASK_WATER+MASK_SOLID
 			} )
-			v.selEnd = trace.HitPos
-			v:SetNWVector("selEnd", v.selEnd)
+			v.mw_selEnd = trace.HitPos
+			v:SetNWVector("mw_selEnd", v.mw_selEnd)
 		end
 	end
-
 end)
 
 net.Receive( "UpdateServerTeams", function( len, pl )
@@ -1098,7 +1282,7 @@ end)
 
 net.Receive( "ServerSetTeam", function( len, pl )
 	local ent = net.ReadEntity()
-	ent.melonTeam = net.ReadInt(4)
+	ent.mw_melonTeam = net.ReadInt(4)
 end)
 
 net.Receive( "ServerSetWaypoint", function( len, pl )

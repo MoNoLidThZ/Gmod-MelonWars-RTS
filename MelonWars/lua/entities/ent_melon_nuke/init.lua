@@ -7,11 +7,11 @@ function ENT:Initialize()
 
 	--print("Started Initialize")
 
-	Defaults ( self )
+	MW_Defaults ( self )
 
 	--print("Changing stats")
 
-	self.modelString = "models/props_phx/cannonball.mdl"
+	self.modelString = "models/hunter/misc/sphere1x1.mdl"
 	self.materialString = "phoenix_storms/dome"
 	
 	self.deathSound = "ambient/explosions/explode_9.wav"
@@ -20,41 +20,43 @@ function ENT:Initialize()
 	
 	self.slowThinkTimer = 1
 	
-	self.population = 10
+	self.population = 4
+
+	self.sphereRadius = 20
 	
 	self.moveType = MOVETYPE_VPHYSICS
 	self.canMove = true
 	self.range = 80
-	self.speed = 70
+	self.speed = 50
 	self.damageDeal = 250
-	self.maxHP = 65
+	self.maxHP = 150
 
 	--print("Finished changing stats")
 	
-	Setup ( self )
+	MW_Setup ( self )
 	
 	--print("Finished Initialize")
 	
 	--self:SetColor(Color(self:GetColor().r/2, self:GetColor().g/2, self:GetColor().b/2, 255))
 	
 	self.effect = ents.Create( "prop_physics" )
-		self.effect:SetModel("models/props_phx/cannonball.mdl")
+		self.effect:SetModel("models/hunter/misc/sphere1x1.mdl")
 		self.effect:SetCollisionGroup( COLLISION_GROUP_IN_VEHICLE )
 		
 		self.effect:SetPos(self:GetPos())
 		self.effect:Spawn()
 		self.effect:SetModelScale( 1.2, 0 )
-		self.effect:SetPos(self:GetPos()+Vector(0,0,-4))
 		self.effect:SetMaterial( "models/alyx/emptool_glow" )
 		--self.effect:SetRenderMode( RENDERMODE_TRANSALPHA )
 		self.effect:SetColor(Color(self:GetColor().r+100, self:GetColor().g+100, self:GetColor().b+100, 255))
 		--self.effect:SetColor(self:GetColor())
-		
+		self.effect:GetPhysicsObject():SetMass(0.01)
 		--self.effect:SetColor(Color(255,255,255,255))
 		
 		self:DeleteOnRemove( self.effect )
 		
-	local weld = constraint.Weld( self, self.effect, 0, 0, 0, true , false )
+		self.effect:SetParent( self, -1 )
+	//local weld = constraint.Weld( self, self.effect, 0, 0, 0, true , false )
 	
 	for k, v in pairs( player.GetAll() ) do
 		sound.Play( "ambient/alarms/train_horn_distant1.wav", v:GetPos(), 60, 75, 1)
@@ -82,13 +84,13 @@ function ENT:SlowThink ( ent )
 		----------------------------------------------------------------------Buscar target
 		local foundEnts = ents.FindInSphere(pos, ent.range )
 		for k, v in RandomPairs( foundEnts ) do
-			--local isConstr = melonTeam
+			--local isConstr = mw_melonTeam
 			--if (v:GetClass() == "prop_physics") then
-			--	isConstr = v:GetVar('melonTeam')
+			--	isConstr = v:GetVar('mw_melonTeam')
 			--end
 			--print(isConstr)
 			if (v.Base == "ent_melon_prop_base") then --si es una pared
-				if (v:GetNWInt("melonTeam", 0) ~= ent:GetNWInt("melonTeam", 0)) then-- si tienen distinto equipo
+				if (v:GetNWInt("mw_melonTeam", 0) ~= ent:GetNWInt("mw_melonTeam", 0)) then-- si tienen distinto equipo
 					----------------------------------------------------------Encontró target
 					ent.targetEntity = v
 				end
@@ -98,7 +100,7 @@ function ENT:SlowThink ( ent )
 		if (ent.targetEntity ~= nil) then
 			local distance = ent.targetEntity:GetPos():Distance(ent:GetPos())
 			if (distance < ent.range and distance > ent.minRange) then
-				if (ent.targetEntity:GetNWInt("melonTeam", 0) ~= ent:GetNWInt("melonTeam", 0)) then
+				if (ent.targetEntity:GetNWInt("mw_melonTeam", 0) ~= ent:GetNWInt("mw_melonTeam", 0)) then
 					ent:Shoot( ent )
 				end
 			end
@@ -159,7 +161,7 @@ function ENT:Shoot ( ent )
 		--effectdata:SetOrigin( ent:GetPos() )
 		--util.Effect( "Explosion", effectdata )
 		--ent:Remove()
-			Die ( ent )
+			MW_Die ( ent )
 		end
 	end )
 end

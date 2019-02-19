@@ -9,7 +9,7 @@ function ENT:Draw()
 end
 
 function ENT:TransportDraw(self, offset)
-	if (cvars.Number("mw_team") == self:GetNWInt("melonTeam", -1)) then
+	if (cvars.Number("mw_team") == self:GetNWInt("mw_melonTeam", -1)) then
 		local angle = LocalPlayer():EyeAngles()+Angle(-90,0,0)
 		local vpos = self:WorldSpaceCenter()+Vector(0,0,16+offset)+angle:Forward()*10-angle:Right()*6
 		cam.Start3D2D( vpos, angle, 1 )

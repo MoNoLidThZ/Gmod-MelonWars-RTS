@@ -6,16 +6,17 @@ include('shared.lua')
 function ENT:Initialize()
 	--print("Started Initialize")
 
-	self:SetPos(self:GetPos()+Vector(0,0,-5))
+	//self:SetPos(self:GetPos()+Vector(0,0,-5))
 	
-	Defaults ( self )
+	MW_Defaults ( self )
 
 	--print("Changing stats")
 	
 	self.modelString = "models/hunter/tubes/circle2x2.mdl"
 	self.materialString = "phoenix_storms/future_vents"
 	self.moveType = MOVETYPE_NONE
-	self.Angles = Angle(0,0,0)
+	//self.Angles = Angle(0,0,0)
+	//self:SetPos(self:GetPos()+Vector(0,0,0))
 	self.canMove = false
 	self.canShoot = false
 	self.maxHP = 100
@@ -24,14 +25,14 @@ function ENT:Initialize()
 	
 	self.slowThinkTimer = 0.1
 	
-	self.population = 1
+	self.population = 0
 	
 	self.deathSound = "ambient/explosions/explode_9.wav"
 	self.deathEffect = "Explosion"
 
 	self.melons = {}
 	--print("Finished changing stats")
-	Setup ( self )
+	MW_Setup ( self )
 	
 	--print("Finished Initialize")
 end
@@ -58,9 +59,9 @@ function ENT:SlowThink(ent)
 end
 
 function ENT:Shoot ( ent )
-	--DefaultShoot ( ent )
+	--MW_DefaultShoot ( ent )
 end
 
 function ENT:DeathEffect ( ent )
-	DefaultDeathEffect ( ent )
+	MW_DefaultDeathEffect ( ent )
 end

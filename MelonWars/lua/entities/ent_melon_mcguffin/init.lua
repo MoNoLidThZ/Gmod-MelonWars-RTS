@@ -3,20 +3,20 @@ AddCSLuaFile( "shared.lua" )  -- and shared scripts are sent.
  
 include('shared.lua')
 
-team_colors  = {Color(255,50,50,255),Color(50,50,255,255),Color(255,200,50,255),Color(30,200,30,255),Color(255,50,255,255),Color(100,255,255,255),Color(255,120,0,255),Color(10,30,70,255)}
+mw_team_colors  = {Color(255,50,50,255),Color(50,50,255,255),Color(255,200,50,255),Color(30,200,30,255),Color(255,50,255,255),Color(100,255,255,255),Color(255,120,0,255),Color(10,30,70,255)}
 
 function ENT:Initialize()
 		
 	self.slowThinkTimer = 2
 
-	self.melonTeam = 0
+	self.mw_melonTeam = 0
 	
 	self.nextSlowThink = 0
 	
 	self:SetModel( "models/props_trainstation/TrackSign03.mdl" )
 	
 	--self:SetAngles(Angle(90,0,0))
-	self:SetPos(self:GetPos()+Vector(0,0,50))
+	//self:SetPos(self:GetPos()+Vector(0,0,50))
 	
 	self:SetMaterial("models/shiny")
 	
@@ -47,12 +47,12 @@ function ENT:SlowThink()
 
 	if (SERVER) then
 		if (self.capTeam ~= 0) then
-			teamCredits[self.capTeam] = teamCredits[self.capTeam]+5
+			mw_teamCredits[self.capTeam] = mw_teamCredits[self.capTeam]+5
 			--print("Crediting team "..tostring(self.capTeam))
 			for k, v in pairs( player.GetAll() ) do
 				if (v:GetInfo("mw_team") == tostring(self.capTeam)) then
-					net.Start("TeamCredits")
-						net.WriteInt(teamCredits[self.capTeam] ,16)
+					net.Start("MW_TeamCredits")
+						net.WriteInt(mw_teamCredits[self.capTeam] ,32)
 					net.Send(v)
 				end
 			end
@@ -64,8 +64,8 @@ function ENT:SlowThink()
 	local foundEnts = ents.FindInSphere(self:GetPos(), 200 )
 	for k, v in RandomPairs( foundEnts ) do
 		if (v.Base == "ent_melon_base") then
-			if (v:GetNWInt("melonTeam", 0) >= 1) then
-				capturing[v:GetNWInt("melonTeam", 0)] = capturing[v:GetNWInt("melonTeam", 0)]+4
+			if (v:GetNWInt("mw_melonTeam", 0) >= 1) then
+				capturing[v:GetNWInt("mw_melonTeam", 0)] = capturing[v:GetNWInt("mw_melonTeam", 0)]+4
 				
 				local effectdata = EffectData()
 				effectdata:SetScale(0)
@@ -130,7 +130,7 @@ end
 
 function GetCaptured(capturingTeam, ent)
 	local newColor = Color(255,255,255,255)
-	if (capturingTeam > 0) then newColor = team_colors[capturingTeam] end
+	if (capturingTeam > 0) then newColor = mw_team_colors[capturingTeam] end
 	--[[if (capturingTeam == 1) then
 		newColor = Color(255,50,50,255)
 	end

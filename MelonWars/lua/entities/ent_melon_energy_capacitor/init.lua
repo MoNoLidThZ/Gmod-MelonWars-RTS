@@ -6,39 +6,29 @@ include('shared.lua')
 function ENT:Initialize()
 	--print("Started Initialize")
 
-	Defaults ( self )
+	MW_Energy_Defaults ( self )
 
 	self.modelString = "models/props_phx/wheels/drugster_back.mdl"
 	self.maxHP = 100
-	self.Angles = Angle(0,0,0)
-	self:SetPos(self:GetPos()+Vector(0,0,-5))
+	//self.Angles = Angle(0,0,0)
+	//self:SetPos(self:GetPos()+Vector(0,0,-5))
 	--self:SetPos(self:GetPos()+Vector(0,0,10))
 	self.moveType = MOVETYPE_NONE
 	self.connections = {}
 
+	self.canMove = false
+	self.careForFriendlyFire = false
 	self.population = 0
-	self:SetNWInt("energy", 0)
-	self:SetNWInt("maxenergy", 1000)
+
+	self.capacity = 500
 	self:SetNWVector("energyPos", Vector(0,0,30))
-	--print("Finished changing stats")
-
-	Setup ( self )
 	
-	--InciteConnections(self)
-
-	CalculateConnections(self)
-	self:SetNWBool("canGive", true)
-	--print("Finished Initialize")
+	MW_Energy_Setup ( self )
 end
 
 function ENT:Think(ent)
-	local energy = math.Round(self:GetNWInt("energy", 0))
-	local max = self:GetNWInt("maxenergy", 0)
-	self:SetNWString("message", "Energy: "..energy.." / "..max)
-
-	ExchangeEnergy(self)
-
-	self:NextThink( CurTime()+0.5 )
+	self:Energy_Set_State()
+	self:NextThink( CurTime()+1 )
 	return true
 end
 
@@ -51,5 +41,19 @@ function ENT:Shoot ( ent )
 end
 
 function ENT:DeathEffect ( ent )
-	DefaultDeathEffect ( ent )
+	timer.Simple( 0.02, function()
+		if (IsValid(ent)) then
+			util.BlastDamage( ent, ent, ent:GetPos(), 100, 100 + self:GetNWInt("energy", 0)/self:GetNWInt("maxenergy", 1)*100 )
+			local effectdata = EffectData()
+			effectdata:SetOrigin( ent:GetPos() )
+			util.Effect( "Explosion", effectdata )
+			
+			local pos1 = ent:GetPos()// Set worldpos 1. Add to the hitpos the world normal.
+			local pos2 = ent:GetPos()+Vector(0,0,-20) // Set worldpos 2. Subtract from the hitpos the world normal.
+			ent.fired = true
+			ent:Remove()
+			
+			util.Decal("Scorch",pos1,pos2)
+		end
+	end)
 end

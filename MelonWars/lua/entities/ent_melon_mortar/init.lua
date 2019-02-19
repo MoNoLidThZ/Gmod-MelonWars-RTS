@@ -7,20 +7,20 @@ function ENT:Initialize()
 
 	--print("Started Initialize")
 
-	Defaults ( self )
+	MW_Defaults ( self )
 
 	--print("Changing stats")
 
 	self.modelString = "models/props_borealis/bluebarrel001.mdl"
 	self.moveType = MOVETYPE_VPHYSICS
 	self.speed = 60
-	self.spread = 20
-	self.damageDeal = 3
+	self.spread = 0
+	self.damageDeal = 2
 	self.maxHP = 75
-	self.range = 500
+	self.range = 700
 	self.minRange = 200
 	
-	self:SetPos(self:GetPos()+Vector(0,0,18))
+	//self:SetPos(self:GetPos()+Vector(0,0,18))
 	
 	--self.Angles = Angle(0,0,0)
 	
@@ -28,11 +28,11 @@ function ENT:Initialize()
 	self.careForWalls = false
 	self.shotOffset = Vector(0,0,15)
 	
-	self.fireDelay = 8
+	self.fireDelay = 6
 	
 	self.damping = 5
 	
-	self.population = 5
+	self.population = 3
 	
 	self.nextShot = CurTime()+3
 	
@@ -43,7 +43,7 @@ function ENT:Initialize()
 	
 	--print("Finished changing stats")
 	
-	Setup ( self )
+	MW_Setup ( self )
 	--print("Finished Initialize")
 	construct.SetPhysProp( self:GetOwner() , self, 0, nil,  { GravityToggle = true, Material = "ice" } )
 end
@@ -53,23 +53,15 @@ function ENT:ModifyColor()
 end
 
 function ENT:SlowThink ( ent )
-	local vel = ent.phys:GetVelocity()
-	--ent.phys:SetAngles( ent.Angles )
-	--ent.phys:SetVelocity(vel)
-	DefaultThink ( ent )
-
+	MW_UnitDefaultThink ( ent )
 end
 
 function ENT:PhysicsUpdate()
-	local mul = 20
-	local phys = self:GetPhysicsObject()
-	local forcePoint = self:GetPos()+self:GetAngles():Up()*mul
-	local forceTarget = self:GetPos()+Vector(0,0,mul)
-	phys:ApplyForceOffset( (forceTarget-forcePoint)*mul, forcePoint )
-	forcePoint = self:GetPos()+self:GetAngles():Up()*-mul
-	forceTarget = self:GetPos()+Vector(0,0,-mul)
-	phys:ApplyForceOffset( (forceTarget-forcePoint)*mul, forcePoint )
-	phys:ApplyForceCenter( Vector(0,0,(forceTarget-forcePoint):Length()*150))
+
+	local inclination = self:Align(self:GetAngles():Up(), Vector(0,0,1), 10000)
+	self.phys:ApplyForceCenter( Vector(0,0,inclination*100))
+
+	self:DefaultPhysicsUpdate()
 end
 
 function ENT:Shoot ( ent )
@@ -83,12 +75,12 @@ function ENT:Shoot ( ent )
 				targetPos = targetPos+ent.targetEntity:GetVar("shotOffset")
 			end
 			
-			local shootVector = (targetPos-ent:GetPos() + Vector(0, 0, 700) + Vector(math.random(-70,70),math.random(-70,70),math.random(-70,70)))*36
+			local shootVector = (targetPos-ent:GetPos() + Vector(0, 0, 2800) + Vector(math.random(-self.spread,self.spread),math.random(-self.spread,self.spread),math.random(-self.spread,self.spread)))*24
 			--local shootVector = (targetPos-ent:GetPos() + Vector(0, 0, 700))*36
 			local bullet = ents.Create( "ent_melonbullet_bomb" )
 			if ( !IsValid( bullet ) ) then return end -- Check whether we successfully made an entity, if not - bail
 			bullet:SetPos( ent:GetPos() + Vector(0,0,50) )
-			bullet:SetNWInt("melonTeam",self.melonTeam)
+			bullet:SetNWInt("mw_melonTeam",self.mw_melonTeam)
 			bullet:SetModel("models/props_phx/misc/smallcannonball.mdl")
 			bullet:Spawn()
 			bullet:SetSolid( SOLID_VPHYSICS )         -- Toolbox
@@ -103,5 +95,5 @@ function ENT:Shoot ( ent )
 end
 
 function ENT:DeathEffect ( ent )
-	DefaultDeathEffect ( ent )
+	MW_DefaultDeathEffect ( ent )
 end

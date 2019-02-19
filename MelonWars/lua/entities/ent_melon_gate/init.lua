@@ -7,7 +7,7 @@ function ENT:Initialize()
 
 	--print("Started Initialize")
 	
-	Defaults ( self )
+	MW_Defaults ( self )
 
 	--print("Changing stats")
 
@@ -18,16 +18,16 @@ function ENT:Initialize()
 	self.speed = 200
 	self.force = 100
 
-	self:SetAngles(self:GetAngles()+Angle(90,0,0))
+	//self:SetAngles(self:GetAngles()+Angle(90,0,0))
 
-	local offset = Vector(0,0,18.5)
-	self:SetPos(self:GetPos()+offset)
+	//local offset = Vector(0,0,18.5)
+	//self:SetPos(self:GetPos()+offset)
 
 	self.closedpos = self:GetPos()
 	self.openedpos = self:GetPos()+Vector(0,0,80)
 
 	self.maxHP = 50
-
+	self.population = 0
 	self.open = false
 	self:SetNWBool("open", self.open)
 	self.process = CurTime()
@@ -36,7 +36,7 @@ function ENT:Initialize()
 	
 	self.damping = 4
 	
-	Setup ( self )
+	MW_Setup ( self )
 	
 	self:GetPhysicsObject():EnableMotion(false)
 	--print("Finished Initialize")
@@ -47,7 +47,7 @@ function ENT:ModifyColor()
 end
 
 function ENT:SlowThink ( ent )
-	--DefaultThink ( ent )
+	--MW_UnitDefaultThink ( ent )
 end
 
 function ENT:Actuate ()
@@ -70,9 +70,9 @@ function ENT:Update()
 end
 
 function ENT:Shoot ( ent )
-	--DefaultShoot ( ent )
+	--MW_DefaultShoot ( ent )
 end
 
 function ENT:DeathEffect ( ent )
-	DefaultDeathEffect ( ent )
+	MW_DefaultDeathEffect ( ent )
 end

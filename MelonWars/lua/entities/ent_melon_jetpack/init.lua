@@ -7,24 +7,32 @@ function ENT:Initialize()
 
 	--print("Started Initialize")
 	
-	Defaults ( self )
+	MW_Defaults ( self )
 
 	--print("Changing stats")
+
+	self.speed = 125
 
 	self.modelString = "models/props_junk/watermelon01.mdl"
 	self.moveType = MOVETYPE_VPHYSICS
 	self.canMove = true
 	
-	self.population = 2
+	self.population = 1
 	
+	self.height = self:GetPos().z
 	self.delayedForce = 0
 
 	self.dropdown = 0
+
+	self.sphereRadius = 7
+
 	--print("Finished changing stats")
 	
-	Setup ( self )
-	
+	MW_Setup ( self )
+
 	--print("Finished Initialize")
+
+	self:GetPhysicsObject():EnableGravity( false )
 end
 
 function ENT:ModifyColor()
@@ -32,7 +40,7 @@ function ENT:ModifyColor()
 end
 
 function ENT:SlowThink ( ent )
-	DefaultThink ( ent )
+	MW_UnitDefaultThink ( ent )
 	if (self.dropdown > 0) then
 		self.dropdown = self.dropdown-1
 	end
@@ -42,11 +50,11 @@ function ENT:SlowThink ( ent )
 end
 
 function ENT:Shoot ( ent )
-	DefaultShoot ( ent )
+	MW_DefaultShoot ( ent )
 end
 
 function ENT:DeathEffect ( ent )
-	DefaultDeathEffect ( ent )
+	MW_DefaultDeathEffect ( ent )
 end
 
 function ENT:Unstuck()
@@ -59,19 +67,25 @@ function ENT:PhysicsUpdate()
 	
 	--if (self.moving == true) then
 
+		self:DefaultPhysicsUpdate()
+
 		local hoverdistance = 150
-		local hoverforce = 20
-		local force = 0
-		local phys = self:GetPhysicsObject()
+		local hoverforce = 1
+		local phys = self.phys
 		local tr = util.TraceLine( {
 		start = self:GetPos(),
 		endpos = self:GetPos()+Vector(0,0,-hoverdistance*2),
-		filter = function( ent ) if ( ent:GetClass() == "prop_physics" ) then return false end end,
-		mask = MASK_WATER+MASK_SOLID
+		filter = function( ent ) if ( not ent:GetPhysicsObject():IsMoveable() ) then return true end end,
+		mask = bit.bor(MASK_SOLID,MASK_WATER)
 		} )
-		
-		local distance = self:GetPos():Distance(tr.HitPos)
-		
+
+		if (not IsValid(tr.Entity) or not string.StartWith( tr.Entity:GetClass(),  "ent_melon" )) then
+			self.height = tr.HitPos.z
+		end
+
+		local force = 0
+		local distance = self:GetPos().z - self.height
+
 		if (self.dropdown > 0) then
 			hoverdistance = 50
 		elseif (self.dropdown < 0) then
@@ -80,16 +94,17 @@ function ENT:PhysicsUpdate()
 		
 		if (distance < hoverdistance) then
 			force = -(distance-hoverdistance)*hoverforce
-			phys:ApplyForceCenter(Vector(0,0,-phys:GetVelocity().z*8))
+			phys:ApplyForceCenter(Vector(0,0,-phys:GetVelocity().z*0.8))
 		else
-			force = 0
+			force = -1
 		end
 		
-		if (force > self.delayedForce) then
+		//if (force > self.delayedForce) then
 			self.delayedForce = (self.delayedForce*2+force)/3
-		else
-			self.delayedForce = self.delayedForce*0.7
-		end
+		//else
+			//self.delayedForce = self.delayedForce*0.7
+		//end
+
 		phys:ApplyForceCenter(Vector(0,0,self.delayedForce))
 	--end
 end
